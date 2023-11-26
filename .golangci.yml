@@ -1,0 +1,7 @@
+# golangci-lint configuration options
+
+linters:
+  enable-all: true
+  disable:
+    - tagliatelle
+    - nonamedreturns
