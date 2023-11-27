@@ -209,3 +209,22 @@ func (c *Client) CopyDocuments(ctx context.Context, documentIDs []ID) (result *S
 
 	return result, c.call(req, result)
 }
+
+// MultiTag adds the given tags to the given documents.
+func (c *Client) MultiTag(ctx context.Context, tags map[ID][]string) (finalErr error) {
+	body, err := json.Marshal(map[string]interface{}{
+		"tags": tags,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal body: %w", err)
+	}
+
+	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/documents/multi-tag", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	return c.call(req, nil)
+}
