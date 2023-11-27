@@ -27,31 +27,31 @@ type SearchFoldersResult struct {
 }
 
 // ListFolders returns all folders at the root.
-func (c *Client) ListFolders(ctx context.Context) (result *SearchFoldersResult, finalErr error) {
+func (c *Client) ListFolders(ctx context.Context) (*SearchFoldersResult, error) {
 	req, err := c.apiRequest(ctx, http.MethodGet, "/v3/folders", nil)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	result = new(SearchFoldersResult)
+	result := new(SearchFoldersResult)
 
 	return result, c.call(req, result)
 }
 
 // GetTrashedFolders returns all folders in the trash.
-func (c *Client) GetTrashedFolders(ctx context.Context) (result *SearchFoldersResult, finalErr error) {
+func (c *Client) GetTrashedFolders(ctx context.Context) (*SearchFoldersResult, error) {
 	req, err := c.apiRequest(ctx, http.MethodGet, "/v3/folders/"+TrashDirName, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	result = new(SearchFoldersResult)
+	result := new(SearchFoldersResult)
 
 	return result, c.call(req, result)
 }
 
 // RenameFolder renames a folder.
-func (c *Client) RenameFolder(ctx context.Context, internalID ID, name string) (folder *Folder, finalErr error) {
+func (c *Client) RenameFolder(ctx context.Context, internalID ID, name string) (*Folder, error) {
 	endpoint := "/v3/folder/" + url.PathEscape(string(internalID)) + "/rename/" + url.PathEscape(name)
 
 	req, err := c.apiRequest(ctx, http.MethodPut, endpoint, nil)
@@ -59,7 +59,7 @@ func (c *Client) RenameFolder(ctx context.Context, internalID ID, name string) (
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	folder = new(Folder)
+	folder := new(Folder)
 
 	return folder, c.call(req, folder)
 }

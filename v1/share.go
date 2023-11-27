@@ -27,10 +27,7 @@ type Share struct {
 }
 
 // Share creates a share for a specific time period, with a title and a security code.
-func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, title, code string) (
-	share *Share,
-	finalErr error,
-) {
+func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, title, code string) (*Share, error) {
 	body := map[string]interface{}{
 		"start_date": startDate,
 		"title":      title,
@@ -56,13 +53,13 @@ func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, 
 
 	req.Header.Set("Content-Type", "application/json")
 
-	share = new(Share)
+	share := new(Share)
 
 	return share, c.call(req, share)
 }
 
 // SetShareDocuments adds a document to a share.
-func (c *Client) SetShareDocuments(ctx context.Context, shareID ID, documentIDs []ID) (finalErr error) {
+func (c *Client) SetShareDocuments(ctx context.Context, shareID ID, documentIDs []ID) error {
 	body, err := json.Marshal(map[string]interface{}{
 		// {"ids":["215dfcdad6044de5b0bfd3cf904820a6"]}
 		"ids": documentIDs,
@@ -88,7 +85,7 @@ type ShareResult struct {
 }
 
 // ListShares returns all shares.
-func (c *Client) ListShares(ctx context.Context) (share *ShareResult, finalErr error) {
+func (c *Client) ListShares(ctx context.Context) (*ShareResult, error) {
 	endpoint := "/v4/partner/user/shares"
 
 	req, err := c.apiRequest(ctx, http.MethodGet, endpoint, nil)
@@ -96,7 +93,7 @@ func (c *Client) ListShares(ctx context.Context) (share *ShareResult, finalErr e
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	share = new(ShareResult)
+	share := new(ShareResult)
 
 	return share, c.call(req, share)
 }
@@ -110,7 +107,7 @@ type ShareResultWithDocuments struct {
 }
 
 // ListSharesWithDocuments returns all shares with documents.
-func (c *Client) ListSharesWithDocuments(ctx context.Context) (result *ShareResultWithDocuments, finalErr error) {
+func (c *Client) ListSharesWithDocuments(ctx context.Context) (*ShareResultWithDocuments, error) {
 	endpoint := "/v3/shares/with_documents"
 
 	req, err := c.apiRequest(ctx, http.MethodGet, endpoint, nil)
@@ -118,13 +115,13 @@ func (c *Client) ListSharesWithDocuments(ctx context.Context) (result *ShareResu
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	result = new(ShareResultWithDocuments)
+	result := new(ShareResultWithDocuments)
 
 	return result, c.call(req, result)
 }
 
 // GetShareDocuments returns all documents of a share.
-func (c *Client) GetShareDocuments(ctx context.Context, shareID ID) (result *SearchDocumentsResult, finalErr error) {
+func (c *Client) GetShareDocuments(ctx context.Context, shareID ID) (*SearchDocumentsResult, error) {
 	endpoint := sharePrefix + url.PathEscape(string(shareID)) + "/documents"
 
 	req, err := c.apiRequest(ctx, http.MethodGet, endpoint, nil)
@@ -132,13 +129,13 @@ func (c *Client) GetShareDocuments(ctx context.Context, shareID ID) (result *Sea
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	result = new(SearchDocumentsResult)
+	result := new(SearchDocumentsResult)
 
 	return result, c.call(req, result)
 }
 
 // GetShare returns a share.
-func (c *Client) GetShare(ctx context.Context, shareID ID) (share *Share, finalErr error) {
+func (c *Client) GetShare(ctx context.Context, shareID ID) (*Share, error) {
 	endpoint := sharePrefix + url.PathEscape(string(shareID))
 
 	req, err := c.apiRequest(ctx, http.MethodGet, endpoint, nil)
@@ -146,13 +143,13 @@ func (c *Client) GetShare(ctx context.Context, shareID ID) (share *Share, finalE
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	share = new(Share)
+	share := new(Share)
 
 	return share, c.call(req, share)
 }
 
 // DeleteShare deletes a share.
-func (c *Client) DeleteShare(ctx context.Context, shareID ID) (finalErr error) {
+func (c *Client) DeleteShare(ctx context.Context, shareID ID) error {
 	endpoint := sharePrefix + url.PathEscape(string(shareID))
 
 	req, err := c.apiRequest(ctx, http.MethodDelete, endpoint, nil)

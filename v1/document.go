@@ -13,7 +13,7 @@ import (
 )
 
 // GetTrashedDocuments returns all documents in the trash.
-func (c *Client) GetTrashedDocuments(ctx context.Context) (result *SearchDocumentsResult, finalErr error) {
+func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResult, error) {
 	body, err := json.Marshal(map[string]interface{}{
 		"user_removal": true,
 	})
@@ -33,9 +33,9 @@ func (c *Client) GetTrashedDocuments(ctx context.Context) (result *SearchDocumen
 
 	req.Header.Set("Content-Type", "application/json")
 
-	result = new(SearchDocumentsResult)
+	var result SearchDocumentsResult
 
-	return result, c.call(req, result)
+	return &result, c.call(req, &result)
 }
 
 // Document represents a document.
@@ -54,15 +54,15 @@ type Document struct {
 }
 
 // ListDocuments returns all documents at the root.
-func (c *Client) ListDocuments(ctx context.Context) (result *SearchDocumentsResult, finalErr error) {
+func (c *Client) ListDocuments(ctx context.Context) (*SearchDocumentsResult, error) {
 	req, err := c.apiRequest(ctx, http.MethodGet, "/v3/documents", nil)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	result = new(SearchDocumentsResult)
+	var result SearchDocumentsResult
 
-	return result, c.call(req, result)
+	return &result, c.call(req, &result)
 }
 
 // DocumentContent returns the content of a document.
@@ -128,8 +128,8 @@ const (
 
 // SearchDocuments searches for documents in the given locations.
 func (c *Client) SearchDocuments(ctx context.Context, internalID ID, locations ...Location) (
-	result *SearchDocumentsResult,
-	finalErr error,
+	*SearchDocumentsResult,
+	error,
 ) {
 	if len(locations) == 0 {
 		locations = []Location{LocationInbox, LocationSafe}
@@ -170,13 +170,13 @@ func (c *Client) SearchDocuments(ctx context.Context, internalID ID, locations .
 
 	req.Header.Set("Content-Type", "application/json")
 
-	result = new(SearchDocumentsResult)
+	var result SearchDocumentsResult
 
-	return result, c.call(req, result)
+	return &result, c.call(req, &result)
 }
 
 // RenameDocument renames a document.
-func (c *Client) RenameDocument(ctx context.Context, internalID ID, name string) (document *Document, finalErr error) {
+func (c *Client) RenameDocument(ctx context.Context, internalID ID, name string) (*Document, error) {
 	endpoint := "/v3/document/" + url.PathEscape(string(internalID)) + "/rename/" + url.PathEscape(name)
 
 	req, err := c.apiRequest(ctx, http.MethodPut, endpoint, nil)
@@ -184,13 +184,13 @@ func (c *Client) RenameDocument(ctx context.Context, internalID ID, name string)
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	document = new(Document)
+	var document Document
 
-	return document, c.call(req, document)
+	return &document, c.call(req, &document)
 }
 
 // CopyDocuments copies the given documents in the same folder.
-func (c *Client) CopyDocuments(ctx context.Context, documentIDs []ID) (result *SearchDocumentsResult, finalErr error) {
+func (c *Client) CopyDocuments(ctx context.Context, documentIDs []ID) (*SearchDocumentsResult, error) {
 	body, err := json.Marshal(map[string]interface{}{
 		"documents": documentIDs,
 	})
@@ -205,13 +205,13 @@ func (c *Client) CopyDocuments(ctx context.Context, documentIDs []ID) (result *S
 
 	req.Header.Set("Content-Type", "application/json")
 
-	result = new(SearchDocumentsResult)
+	var result SearchDocumentsResult
 
-	return result, c.call(req, result)
+	return &result, c.call(req, &result)
 }
 
 // MultiTag adds the given tags to the given documents.
-func (c *Client) MultiTag(ctx context.Context, tags map[ID][]string) (finalErr error) {
+func (c *Client) MultiTag(ctx context.Context, tags map[ID][]string) error {
 	body, err := json.Marshal(map[string]interface{}{
 		"tags": tags,
 	})
