@@ -1,0 +1,28 @@
+---
+# Github Actions build for rclone
+# -*- compile-command: "yamllint -f parsable build.yml" -*-
+
+name: test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+  # Optional: allow read access to pull request. Use with `only-new-issues` option.
+  # pull-requests: read
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          install-mode: "binary"
+          version: v1.55
+          args: --timeout=30m
