@@ -128,31 +128,103 @@ const (
 	LocationTrash                 // TRASH
 )
 
+// DocumentSearchOption represents an option for searching documents.
+type DocumentSearchOption func(map[string]interface{})
+
+// HealthDocuments returns only health documents.
+func HealthDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["health"] = true
+	}
+}
+
+// NotHealthDocuments returns only non-health documents.
+func NotHealthDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["health"] = false
+	}
+}
+
+// SharedDocuments returns only shared documents.
+func SharedDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["document_shared"] = true
+	}
+}
+
+// NotSharedDocuments returns only non-shared documents.
+func NotSharedDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["document_shared"] = false
+	}
+}
+
+// ReadDocuments returns only read documents.
+func ReadDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["document_read"] = true
+	}
+}
+
+// UnreadDocuments returns only unread documents.
+func UnreadDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["document_read"] = false
+	}
+}
+
+// CertifiedDocuments returns only certified documents.
+func CertifiedDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["document_certified"] = true
+	}
+}
+
+// NotCertifiedDocuments returns only non-certified documents.
+func NotCertifiedDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["document_certified"] = false
+	}
+}
+
+// FavoriteDocuments returns only favorite documents.
+func FavoriteDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["favorite"] = true
+	}
+}
+
+// NotFavoriteDocuments returns only non-favorite documents.
+func NotFavoriteDocuments() DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["favorite"] = false
+	}
+}
+
+// OnlyDocumentLocatedAt returns only documents located at the given locations.
+func OnlyDocumentLocatedAt(locations ...Location) DocumentSearchOption {
+	locationsStr := make([]string, len(locations))
+	for i, l := range locations {
+		locationsStr[i] = l.String()
+	}
+
+	return func(body map[string]interface{}) {
+		body["locations"] = locationsStr
+	}
+}
+
 // SearchDocuments searches for documents in the given locations.
-func (c *Client) SearchDocuments(ctx context.Context, internalID ID, locations ...Location) (
+func (c *Client) SearchDocuments(ctx context.Context, internalID ID, options ...DocumentSearchOption) (
 	*SearchDocumentsResult,
 	error,
 ) {
-	if len(locations) == 0 {
-		locations = []Location{LocationInbox, LocationSafe}
+	body := map[string]interface{}{
+		"folder_id": internalID,
+		"locations": []string{LocationInbox.String(), LocationSafe.String()},
 	}
 
-	var body interface{}
-	if len(locations) == 1 && locations[0] == LocationTrash {
-		body = map[string]interface{}{
-			"folder_id": internalID,
-			"trash":     true,
-		}
-	} else {
-		locationsStr := make([]string, len(locations))
-		for i, l := range locations {
-			locationsStr[i] = l.String()
-		}
-
-		body = map[string]interface{}{
-			"folder_id": internalID,
-			"locations": locationsStr,
-		}
+	for _, option := range options {
+		option(body)
 	}
 
 	bodyBytes, err := json.Marshal(body)
