@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-type ID string
+const (
+	DefaultAPIURL      = "https://api.digiposte.fr/api"
+	DefaultDocumentURL = "https://secure.digiposte.fr"
+)
 
 // Client is a Digiposte client.
 type Client struct {
@@ -23,7 +26,12 @@ type Client struct {
 }
 
 // NewClient creates a new Digiposte client.
-func NewClient(apiURL, documentURL string, client *http.Client) (*Client, error) {
+func NewClient(client *http.Client) (*Client, error) {
+	return NewCustomClient(DefaultAPIURL, DefaultDocumentURL, client)
+}
+
+// NewClient creates a new Digiposte client.
+func NewCustomClient(apiURL, documentURL string, client *http.Client) (*Client, error) {
 	return &Client{
 		apiURL:      strings.TrimRight(apiURL, "/"),
 		documentURL: strings.TrimRight(documentURL, "/"),
@@ -58,6 +66,9 @@ type Profile struct {
 		Email     string `json:"primary_email"`
 	} `json:",inline"`
 }
+
+// ID represents an internal digiposte ID.
+type ID string
 
 // GetProfile returns the profile of the user.
 func (c *Client) GetProfile(ctx context.Context) (profile *Profile, finalErr error) {
