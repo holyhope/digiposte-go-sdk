@@ -70,11 +70,26 @@ type Profile struct {
 // ID represents an internal digiposte ID.
 type ID string
 
+//go:generate stringer -type=ProfileMode -linecomment
+
+type ProfileMode int
+
+const (
+	ProfileModeDefault            ProfileMode = iota // default
+	ProfileModeNoSpaceConsumption                    // without_space_consumption
+)
+
 // GetProfile returns the profile of the user.
-func (c *Client) GetProfile(ctx context.Context) (profile *Profile, finalErr error) {
+func (c *Client) GetProfile(ctx context.Context, mode fmt.Stringer) (profile *Profile, finalErr error) {
 	req, err := c.apiRequest(ctx, http.MethodGet, "/v4/profile", nil)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
+	}
+
+	if mode != ProfileModeDefault {
+		queryParams := req.URL.Query()
+		queryParams.Set("mode", mode.String())
+		req.URL.RawQuery = queryParams.Encode()
 	}
 
 	profile = new(Profile)
