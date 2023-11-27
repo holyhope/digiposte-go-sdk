@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -227,4 +229,110 @@ func (c *Client) MultiTag(ctx context.Context, tags map[ID][]string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	return c.call(req, nil)
+}
+
+//go:generate stringer -type=DocumentType -trimprefix=DocumentType
+
+type DocumentType int8
+
+const (
+	DocumentTypeBasic DocumentType = iota
+	DocumentTypeHealth
+)
+
+// CreateDocument creates a document.
+func (c *Client) CreateDocument(
+	ctx context.Context,
+	folderID ID,
+	name string,
+	data io.Reader,
+	docType DocumentType,
+) (document *Document, finalErr error) {
+	var buf bytes.Buffer
+
+	formWriter := multipart.NewWriter(&buf)
+	defer func(formWriter *multipart.Writer) {
+		if err := formWriter.Close(); err != nil {
+			err := fmt.Errorf("close writer: %w", err)
+
+			if finalErr == nil {
+				finalErr = err
+			} else {
+				finalErr = errors.Join(finalErr, err)
+			}
+		}
+	}(formWriter)
+
+	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/document", &buf)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+
+	// Copy the actual file content to the target destination
+	if err := populateUploadForm(formWriter, docType, folderID, name, data); err != nil {
+		return nil, fmt.Errorf("populate form: %w", err)
+	}
+
+	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+
+	document = new(Document)
+
+	return document, c.call(req, document)
+}
+
+func populateUploadForm(
+	formWriter *multipart.Writer,
+	docType DocumentType,
+	folderID ID,
+	name string,
+	data io.Reader,
+) (finalErr error) {
+	if err := formWriter.WriteField("health_document", strconv.FormatBool(docType == DocumentTypeHealth)); err != nil {
+		return fmt.Errorf("write health_document: %w", err)
+	}
+
+	if err := formWriter.WriteField("folder_id", string(folderID)); err != nil {
+		return fmt.Errorf("write folder_id: %w", err)
+	}
+
+	if err := formWriter.WriteField("title", name); err != nil {
+		return fmt.Errorf("write title: %w", err)
+	}
+
+	documentUploadStream, err := formWriter.CreateFormFile("archive", name)
+	if err != nil {
+		return fmt.Errorf("create archive file: %w", err)
+	}
+
+	sizeStream, err := formWriter.CreateFormField("archive_size")
+	if err != nil {
+		return fmt.Errorf("create archive_size field: %w", err)
+	}
+
+	go func(documentUploadStream, sizeStream io.Writer, content io.Reader) {
+		if err := upload(documentUploadStream, content, sizeStream); err != nil {
+			err := fmt.Errorf("upload: %w", err)
+
+			if finalErr == nil {
+				finalErr = err
+			} else {
+				finalErr = errors.Join(finalErr, err)
+			}
+		}
+	}(documentUploadStream, sizeStream, data)
+
+	return nil
+}
+
+func upload(documentUploadStream io.Writer, content io.Reader, sizeStream io.Writer) error {
+	size, err := io.Copy(documentUploadStream, content)
+	if err != nil {
+		return fmt.Errorf("copy: %w", err)
+	}
+
+	if _, err := sizeStream.Write([]byte(strconv.FormatInt(size, 10))); err != nil {
+		return fmt.Errorf("write size: %w", err)
+	}
+
+	return nil
 }
