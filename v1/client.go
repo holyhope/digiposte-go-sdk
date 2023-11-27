@@ -190,3 +190,13 @@ func (c *Client) call(req *http.Request, result interface{}) (finalErr error) {
 
 	return nil
 }
+
+// Logout logs out the user.
+func (c *Client) Logout(ctx context.Context) error {
+	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/profile/logout", nil)
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	return c.call(req, nil)
+}
