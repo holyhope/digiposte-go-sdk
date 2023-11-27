@@ -97,6 +97,23 @@ func (c *Client) GetProfile(ctx context.Context, mode fmt.Stringer) (profile *Pr
 	return profile, c.call(req, profile)
 }
 
+// ProfileSafeSize represents the usage of the safe.
+type ProfileSafeSize struct {
+	ActualSafeSize int64 `json:"actual_safe_size"`
+}
+
+// GetProfileSafeSize returns the usage of the safe.
+func (c *Client) GetProfileSafeSize(ctx context.Context) (currentSize *ProfileSafeSize, finalErr error) {
+	req, err := c.apiRequest(ctx, http.MethodGet, "/v4/profile/safe/size", nil)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+
+	currentSize = new(ProfileSafeSize)
+
+	return currentSize, c.call(req, currentSize)
+}
+
 // CloseBodyError is an error returned when the body of a response cannot be closed.
 type CloseBodyError struct {
 	Err error
