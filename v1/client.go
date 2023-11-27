@@ -100,7 +100,7 @@ func (c *Client) checkResponse(response *http.Response, expectedStatus int) erro
 }
 
 // Trash move trashes the given documents and folders to the trash.
-func (c *Client) Trash(ctx context.Context, documentIDs, folderIDs []ID) (finalErr error) {
+func (c *Client) Trash(ctx context.Context, documentIDs, folderIDs []ID) error {
 	body, err := json.Marshal(map[string]interface{}{
 		"document_ids": documentIDs,
 		"folder_ids":   folderIDs,
@@ -124,7 +124,7 @@ func (c *Client) Trash(ctx context.Context, documentIDs, folderIDs []ID) (finalE
 }
 
 // Delete deletes permanently the given documents and folders.
-func (c *Client) Delete(ctx context.Context, documentIDs, folderIDs []ID) (finalErr error) {
+func (c *Client) Delete(ctx context.Context, documentIDs, folderIDs []ID) error {
 	body, err := json.Marshal(map[string]interface{}{
 		"document_ids": documentIDs,
 		"folder_ids":   folderIDs,
@@ -142,7 +142,7 @@ func (c *Client) Delete(ctx context.Context, documentIDs, folderIDs []ID) (final
 }
 
 // Move moves the given documents and folders to the given destination.
-func (c *Client) Move(ctx context.Context, destinationID ID, documentIDs, folderIDs []ID) (finalErr error) {
+func (c *Client) Move(ctx context.Context, destinationID ID, documentIDs, folderIDs []ID) error {
 	body, err := json.Marshal(map[string]interface{}{
 		"document_ids": documentIDs,
 		"folder_ids":   folderIDs,
@@ -171,11 +171,7 @@ func (c *Client) call(req *http.Request, result interface{}) (finalErr error) {
 
 	defer func() {
 		if err := response.Body.Close(); err != nil {
-			if finalErr == nil {
-				finalErr = &CloseBodyError{Err: err}
-			} else {
-				finalErr = errors.Join(finalErr, &CloseBodyError{Err: err})
-			}
+			finalErr = errors.Join(finalErr, &CloseBodyError{Err: err})
 		}
 	}()
 

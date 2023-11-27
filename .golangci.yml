@@ -3,5 +3,4 @@
 linters:
   enable-all: true
   disable:
-    - tagliatelle
-    - nonamedreturns
+    - tagliatelle # Digiposte API is not consistent, it use snake_case and camelCase

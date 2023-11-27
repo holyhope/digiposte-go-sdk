@@ -68,7 +68,7 @@ func (c *Client) ListDocuments(ctx context.Context) (*SearchDocumentsResult, err
 }
 
 // DocumentContent returns the content of a document.
-func (c *Client) DocumentContent(ctx context.Context, internalID ID) (
+func (c *Client) DocumentContent(ctx context.Context, internalID ID) ( //nolint:nonamedreturns
 	contentBuffer io.ReadCloser,
 	contentType string,
 	finalErr error,
@@ -87,11 +87,7 @@ func (c *Client) DocumentContent(ctx context.Context, internalID ID) (
 
 	defer func() {
 		if err := response.Body.Close(); err != nil {
-			if finalErr == nil {
-				finalErr = &CloseBodyError{Err: err}
-			} else {
-				finalErr = errors.Join(finalErr, &CloseBodyError{Err: err})
-			}
+			finalErr = errors.Join(finalErr, &CloseBodyError{Err: err})
 		}
 	}()
 
@@ -313,7 +309,7 @@ const (
 )
 
 // CreateDocument creates a document.
-func (c *Client) CreateDocument(
+func (c *Client) CreateDocument( //nolint:nonamedreturns
 	ctx context.Context,
 	folderID ID,
 	name string,
@@ -325,12 +321,8 @@ func (c *Client) CreateDocument(
 	formWriter := multipart.NewWriter(&buf)
 	defer func(formWriter *multipart.Writer) {
 		if err := formWriter.Close(); err != nil {
-			err := fmt.Errorf("close writer: %w", err)
-
 			if finalErr == nil {
-				finalErr = err
-			} else {
-				finalErr = errors.Join(finalErr, err)
+				finalErr = errors.Join(finalErr, fmt.Errorf("close writer: %w", err))
 			}
 		}
 	}(formWriter)
@@ -352,7 +344,7 @@ func (c *Client) CreateDocument(
 	return document, c.call(req, document)
 }
 
-func populateUploadForm(
+func populateUploadForm( //nolint:nonamedreturns
 	formWriter *multipart.Writer,
 	docType DocumentType,
 	folderID ID,
@@ -383,12 +375,8 @@ func populateUploadForm(
 
 	go func(documentUploadStream, sizeStream io.Writer, content io.Reader) {
 		if err := upload(documentUploadStream, content, sizeStream); err != nil {
-			err := fmt.Errorf("upload: %w", err)
-
 			if finalErr == nil {
-				finalErr = err
-			} else {
-				finalErr = errors.Join(finalErr, err)
+				finalErr = errors.Join(finalErr, fmt.Errorf("upload: %w", err))
 			}
 		}
 	}(documentUploadStream, sizeStream, data)
