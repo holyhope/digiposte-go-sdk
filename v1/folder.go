@@ -1,7 +1,9 @@
 package digiposte
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -55,6 +57,26 @@ func (c *Client) RenameFolder(ctx context.Context, internalID ID, name string) (
 	endpoint := "/v3/folder/" + url.PathEscape(string(internalID)) + "/rename/" + url.PathEscape(name)
 
 	req, err := c.apiRequest(ctx, http.MethodPut, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+
+	folder := new(Folder)
+
+	return folder, c.call(req, folder)
+}
+
+// CreateFolder creates a folder.
+func (c *Client) CreateFolder(ctx context.Context, parentID ID, name string) (*Folder, error) {
+	body, err := json.Marshal(map[string]interface{}{
+		"parent_id": parentID,
+		"name":      name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal body: %w", err)
+	}
+
+	req, err := c.apiRequest(ctx, http.MethodPut, "/v3/folder", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
