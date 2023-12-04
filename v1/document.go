@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -87,7 +86,7 @@ func (c *Client) DocumentContent(ctx context.Context, internalID ID) ( //nolint:
 
 	defer func() {
 		if err := response.Body.Close(); err != nil {
-			finalErr = errors.Join(finalErr, &CloseBodyError{Err: err})
+			finalErr = &CloseBodyError{Err: err, OriginalError: finalErr}
 		}
 	}()
 
@@ -322,7 +321,7 @@ func (c *Client) CreateDocument( //nolint:nonamedreturns
 	defer func(formWriter *multipart.Writer) {
 		if err := formWriter.Close(); err != nil {
 			if finalErr == nil {
-				finalErr = errors.Join(finalErr, fmt.Errorf("close writer: %w", err))
+				finalErr = &CloseWriterError{Err: err, OriginalError: finalErr}
 			}
 		}
 	}(formWriter)
@@ -376,7 +375,7 @@ func populateUploadForm( //nolint:nonamedreturns
 	go func(documentUploadStream, sizeStream io.Writer, content io.Reader) {
 		if err := upload(documentUploadStream, content, sizeStream); err != nil {
 			if finalErr == nil {
-				finalErr = errors.Join(finalErr, fmt.Errorf("upload: %w", err))
+				finalErr = &UploadError{Err: err, OriginalError: finalErr}
 			}
 		}
 	}(documentUploadStream, sizeStream, data)
@@ -395,4 +394,40 @@ func upload(documentUploadStream io.Writer, content io.Reader, sizeStream io.Wri
 	}
 
 	return nil
+}
+
+// CloseWriterError represents an error during the closing of a writer.
+type CloseWriterError struct {
+	Err           error
+	OriginalError error
+}
+
+func (e *CloseWriterError) Error() string {
+	return fmt.Sprintf("upload: %v", e.Err)
+}
+
+func (e *CloseWriterError) Unwrap() error {
+	if e.OriginalError != nil {
+		return e.OriginalError
+	}
+
+	return e.Err
+}
+
+// UploadError represents an error during an upload.
+type UploadError struct {
+	Err           error
+	OriginalError error
+}
+
+func (e *UploadError) Error() string {
+	return fmt.Sprintf("upload: %v", e.Err)
+}
+
+func (e *UploadError) Unwrap() error {
+	if e.OriginalError != nil {
+		return e.OriginalError
+	}
+
+	return e.Err
 }

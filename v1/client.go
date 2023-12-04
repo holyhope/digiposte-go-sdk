@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -52,7 +51,8 @@ type ID string
 
 // CloseBodyError is an error returned when the body of a response cannot be closed.
 type CloseBodyError struct {
-	Err error
+	Err           error
+	OriginalError error
 }
 
 func (e *CloseBodyError) Error() string {
@@ -60,6 +60,10 @@ func (e *CloseBodyError) Error() string {
 }
 
 func (e *CloseBodyError) Unwrap() error {
+	if e.OriginalError != nil {
+		return e.OriginalError
+	}
+
 	return e.Err
 }
 
@@ -171,7 +175,7 @@ func (c *Client) call(req *http.Request, result interface{}) (finalErr error) {
 
 	defer func() {
 		if err := response.Body.Close(); err != nil {
-			finalErr = errors.Join(finalErr, &CloseBodyError{Err: err})
+			finalErr = &CloseBodyError{Err: err, OriginalError: finalErr}
 		}
 	}()
 
