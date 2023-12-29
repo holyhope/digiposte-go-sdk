@@ -3,15 +3,14 @@ package chrome
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"golang.org/x/oauth2"
+
+	"github.com/holyhope/digiposte-go-sdk/internal/utils"
 )
 
 type finalScreen struct {
@@ -62,12 +61,12 @@ func (s *finalScreen) Do(ctx context.Context) error {
 		return fmt.Errorf("fetch token from browser: %w", err)
 	}
 
-	expiry, err := strconv.ParseFloat(expiryStr, 64)
+	expiry, err := utils.UnixString2Time(expiryStr)
 	if err != nil {
-		return fmt.Errorf("parse access_expires_at: %w", err)
+		return fmt.Errorf("parse app_expires_at: %w", err)
 	}
 
-	token.Expiry = unixFloat2Time(expiry)
+	token.Expiry = expiry
 
 	if !token.Valid() {
 		return &InvalidTokenError{Token: token}
@@ -130,7 +129,7 @@ func convertCookie(cookie *network.Cookie) *http.Cookie {
 		Value:    cookie.Value,
 		Path:     cookie.Path,
 		Domain:   cookie.Domain,
-		Expires:  unixFloat2Time(cookie.Expires),
+		Expires:  utils.UnixFloat2Time(cookie.Expires),
 		Secure:   cookie.Secure,
 		HttpOnly: cookie.HTTPOnly,
 		SameSite: sameSite,
@@ -140,11 +139,4 @@ func convertCookie(cookie *network.Cookie) *http.Cookie {
 		MaxAge:     0,
 		Unparsed:   nil,
 	}
-}
-
-func unixFloat2Time(unix float64) time.Time {
-	sec := math.Trunc(unix)
-	nano := (unix - sec) * float64(time.Second/time.Nanosecond)
-
-	return time.Unix(int64(sec), int64(nano))
 }
