@@ -27,17 +27,17 @@ type Client struct {
 }
 
 // NewClient creates a new Digiposte client.
-func NewClient(client *http.Client) (*Client, error) {
+func NewClient(client *http.Client) *Client {
 	return NewCustomClient(DefaultAPIURL, DefaultDocumentURL, client)
 }
 
 // NewClient creates a new Digiposte client.
-func NewCustomClient(apiURL, documentURL string, client *http.Client) (*Client, error) {
+func NewCustomClient(apiURL, documentURL string, client *http.Client) *Client {
 	return &Client{
 		apiURL:      strings.TrimRight(apiURL, "/"),
 		documentURL: strings.TrimRight(documentURL, "/"),
 		client:      client,
-	}, nil
+	}
 }
 
 func (c *Client) apiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
