@@ -10,12 +10,13 @@ func _() {
 	var x [1]struct{}
 	_ = x[LocationInbox-0]
 	_ = x[LocationSafe-1]
-	_ = x[LocationTrash-2]
+	_ = x[LocationTrashInbox-2]
+	_ = x[LocationTrashSafe-3]
 }
 
-const _Location_name = "INBOXSAFETRASH"
+const _Location_name = "INBOXSAFETRASH_INBOXTRASH_SAFE"
 
-var _Location_index = [...]uint8{0, 5, 9, 14}
+var _Location_index = [...]uint8{0, 5, 9, 20, 30}
 
 func (i Location) String() string {
 	if i < 0 || i >= Location(len(_Location_index)-1) {
