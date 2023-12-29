@@ -118,9 +118,10 @@ type SearchDocumentsResult struct {
 type Location int8
 
 const (
-	LocationInbox Location = iota // INBOX
-	LocationSafe                  // SAFE
-	LocationTrash                 // TRASH
+	LocationInbox      Location = iota // INBOX
+	LocationSafe                       // SAFE
+	LocationTrashInbox                 // TRASH_INBOX
+	LocationTrashSafe                  // TRASH_SAFE
 )
 
 // DocumentSearchOption represents an option for searching documents.
