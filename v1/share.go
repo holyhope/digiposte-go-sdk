@@ -10,12 +10,14 @@ import (
 	"time"
 )
 
+type ShareID digiposteID
+
 const sharePrefix = "/v3/share/"
 
 // Share represents a share.
 type Share struct {
-	InternalID     ID        `json:"id"`
-	ShortID        ID        `json:"short_id"`
+	InternalID     ShareID   `json:"id"`
+	ShortID        string    `json:"short_id"`
 	SecurityCode   string    `json:"security_code"`
 	ShortURL       string    `json:"short_url"`
 	Title          string    `json:"title"`
@@ -51,17 +53,14 @@ func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, 
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	share := new(Share)
 
 	return share, c.call(req, share)
 }
 
 // SetShareDocuments adds a document to a share.
-func (c *Client) SetShareDocuments(ctx context.Context, shareID ID, documentIDs []ID) error {
+func (c *Client) SetShareDocuments(ctx context.Context, shareID ShareID, documentIDs []DocumentID) error {
 	body, err := json.Marshal(map[string]interface{}{
-		// {"ids":["215dfcdad6044de5b0bfd3cf904820a6"]}
 		"ids": documentIDs,
 	})
 	if err != nil {
@@ -121,7 +120,7 @@ func (c *Client) ListSharesWithDocuments(ctx context.Context) (*ShareResultWithD
 }
 
 // GetShareDocuments returns all documents of a share.
-func (c *Client) GetShareDocuments(ctx context.Context, shareID ID) (*SearchDocumentsResult, error) {
+func (c *Client) GetShareDocuments(ctx context.Context, shareID ShareID) (*SearchDocumentsResult, error) {
 	endpoint := sharePrefix + url.PathEscape(string(shareID)) + "/documents"
 
 	req, err := c.apiRequest(ctx, http.MethodGet, endpoint, nil)
@@ -135,7 +134,7 @@ func (c *Client) GetShareDocuments(ctx context.Context, shareID ID) (*SearchDocu
 }
 
 // GetShare returns a share.
-func (c *Client) GetShare(ctx context.Context, shareID ID) (*Share, error) {
+func (c *Client) GetShare(ctx context.Context, shareID ShareID) (*Share, error) {
 	endpoint := sharePrefix + url.PathEscape(string(shareID))
 
 	req, err := c.apiRequest(ctx, http.MethodGet, endpoint, nil)
@@ -149,7 +148,7 @@ func (c *Client) GetShare(ctx context.Context, shareID ID) (*Share, error) {
 }
 
 // DeleteShare deletes a share.
-func (c *Client) DeleteShare(ctx context.Context, shareID ID) error {
+func (c *Client) DeleteShare(ctx context.Context, shareID ShareID) error {
 	endpoint := sharePrefix + url.PathEscape(string(shareID))
 
 	req, err := c.apiRequest(ctx, http.MethodDelete, endpoint, nil)

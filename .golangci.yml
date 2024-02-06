@@ -4,3 +4,49 @@ linters:
   enable-all: true
   disable:
     - tagliatelle # Digiposte API is not consistent, it use snake_case and camelCase
+    - nosnakecase
+
+linters-settings:
+  # Gci controls Go package import order and makes it always deterministic.
+  gci:
+    # Section configuration to compare against.
+    # Section names are case-insensitive and may contain parameters in ().
+    # The default order of sections is `standard > default > custom > blank > dot > alias`,
+    # If `custom-order` is `true`, it follows the order of `sections` option.
+    # Default: ["standard", "default"]
+    sections:
+      - standard # Standard section: captures all standard packages.
+      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
+      - default # Default section: contains all imports that could not be matched to another section type.
+      - prefix(github.com/holyhope/digiposte-go-sdk) # Custom section: groups all imports with the specified Prefix.
+      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
+
+  depguard:
+    # Default: Only allow $gostd in all files.
+    rules:
+      # Name of a rule.
+      main:
+        files:
+        - "$all"
+        - "!$test"
+        list-mode: lax
+        allow:
+          - $gostd
+          - github.com/chromedp
+          - github.com/holyhope
+          - github.com/Davincible/chromedp-undetected
+          - github.com/go-oauth2/oauth2/v4
+          - github.com/pquerna/otp
+
+      # Name of a rule.
+      tests:
+        files:
+          - "$test"
+        list-mode: lax
+        allow:
+          - $gostd
+          - github.com/holyhope
+          - github.com/onsi/ginkgo
+          - github.com/onsi/gomega
+          - github.com/go-oauth2/oauth2/v4
+          - github.com/go-rod/rod/lib/launcher

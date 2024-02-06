@@ -1,0 +1,4 @@
+Hello world!
+
+Thank you for using digiposte-go-sdk.
+If you like it, please support us on GitHub: https://github.com/sponsors/holyhope
