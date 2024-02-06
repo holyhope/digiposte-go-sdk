@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+type DocumentID digiposteID
+
 // GetTrashedDocuments returns all documents in the trash.
 func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResult, error) {
 	body, err := json.Marshal(map[string]interface{}{
@@ -32,8 +34,6 @@ func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResul
 	queryParams.Set("sort", "TITLE")
 	req.URL.RawQuery = queryParams.Encode()
 
-	req.Header.Set("Content-Type", "application/json")
-
 	var result SearchDocumentsResult
 
 	return &result, c.call(req, &result)
@@ -41,17 +41,17 @@ func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResul
 
 // Document represents a document.
 type Document struct {
-	InternalID     ID        `json:"id"`
-	Name           string    `json:"filename"`
-	CreatedAt      time.Time `json:"creation_date"`
-	Size           int64     `json:"size"`
-	MimeType       string    `json:"mimetype"`
-	FolderID       string    `json:"folder_id"`
-	Location       string    `json:"location"`
-	Shared         bool      `json:"shared"`
-	Read           bool      `json:"read"`
-	HealthDocument bool      `json:"health_document"`
-	UserTags       []string  `json:"user_tags"`
+	InternalID     DocumentID `json:"id"`
+	Name           string     `json:"filename"`
+	CreatedAt      time.Time  `json:"creation_date"`
+	Size           int64      `json:"size"`
+	MimeType       string     `json:"mimetype"`
+	FolderID       string     `json:"folder_id"`
+	Location       string     `json:"location"`
+	Shared         bool       `json:"shared"`
+	Read           bool       `json:"read"`
+	HealthDocument bool       `json:"health_document"`
+	UserTags       []string   `json:"user_tags"`
 }
 
 // ListDocuments returns all documents at the root.
@@ -67,7 +67,7 @@ func (c *Client) ListDocuments(ctx context.Context) (*SearchDocumentsResult, err
 }
 
 // DocumentContent returns the content of a document.
-func (c *Client) DocumentContent(ctx context.Context, internalID ID) ( //nolint:nonamedreturns
+func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) ( //nolint:nonamedreturns
 	contentBuffer io.ReadCloser,
 	contentType string,
 	finalErr error,
@@ -210,7 +210,7 @@ func OnlyDocumentLocatedAt(locations ...Location) DocumentSearchOption {
 }
 
 // SearchDocuments searches for documents in the given locations.
-func (c *Client) SearchDocuments(ctx context.Context, internalID ID, options ...DocumentSearchOption) (
+func (c *Client) SearchDocuments(ctx context.Context, internalID FolderID, options ...DocumentSearchOption) (
 	*SearchDocumentsResult,
 	error,
 ) {
@@ -238,15 +238,13 @@ func (c *Client) SearchDocuments(ctx context.Context, internalID ID, options ...
 	queryParams.Set("sort", "TITLE")
 	req.URL.RawQuery = queryParams.Encode()
 
-	req.Header.Set("Content-Type", "application/json")
-
 	var result SearchDocumentsResult
 
 	return &result, c.call(req, &result)
 }
 
 // RenameDocument renames a document.
-func (c *Client) RenameDocument(ctx context.Context, internalID ID, name string) (*Document, error) {
+func (c *Client) RenameDocument(ctx context.Context, internalID DocumentID, name string) (*Document, error) {
 	endpoint := "/v3/document/" + url.PathEscape(string(internalID)) + "/rename/" + url.PathEscape(name)
 
 	req, err := c.apiRequest(ctx, http.MethodPut, endpoint, nil)
@@ -260,7 +258,7 @@ func (c *Client) RenameDocument(ctx context.Context, internalID ID, name string)
 }
 
 // CopyDocuments copies the given documents in the same folder.
-func (c *Client) CopyDocuments(ctx context.Context, documentIDs []ID) (*SearchDocumentsResult, error) {
+func (c *Client) CopyDocuments(ctx context.Context, documentIDs []DocumentID) (*SearchDocumentsResult, error) {
 	body, err := json.Marshal(map[string]interface{}{
 		"documents": documentIDs,
 	})
@@ -273,15 +271,13 @@ func (c *Client) CopyDocuments(ctx context.Context, documentIDs []ID) (*SearchDo
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	var result SearchDocumentsResult
 
 	return &result, c.call(req, &result)
 }
 
 // MultiTag adds the given tags to the given documents.
-func (c *Client) MultiTag(ctx context.Context, tags map[ID][]string) error {
+func (c *Client) MultiTag(ctx context.Context, tags map[DocumentID][]string) error {
 	body, err := json.Marshal(map[string]interface{}{
 		"tags": tags,
 	})
@@ -293,8 +289,6 @@ func (c *Client) MultiTag(ctx context.Context, tags map[ID][]string) error {
 	if err != nil {
 		return fmt.Errorf("new request: %w", err)
 	}
-
-	req.Header.Set("Content-Type", "application/json")
 
 	return c.call(req, nil)
 }
@@ -311,90 +305,74 @@ const (
 // CreateDocument creates a document.
 func (c *Client) CreateDocument( //nolint:nonamedreturns
 	ctx context.Context,
-	folderID ID,
+	folderID FolderID,
 	name string,
 	data io.Reader,
 	docType DocumentType,
 ) (document *Document, finalErr error) {
 	var buf bytes.Buffer
 
-	formWriter := multipart.NewWriter(&buf)
-	defer func(formWriter *multipart.Writer) {
-		if err := formWriter.Close(); err != nil {
-			if finalErr == nil {
-				finalErr = &CloseWriterError{Err: err, OriginalError: finalErr}
-			}
-		}
-	}(formWriter)
+	formWriter, err := uploadForm(&buf, docType, folderID, name, data)
+	if err != nil {
+		return nil, fmt.Errorf("upload form: %w", err)
+	}
 
 	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/document", &buf)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	// Copy the actual file content to the target destination
-	if err := populateUploadForm(formWriter, docType, folderID, name, data); err != nil {
-		return nil, fmt.Errorf("populate form: %w", err)
-	}
-
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
+	req.Header.Set("X-API-VERSION-MINOR", "2")
+	req.Header.Set("Origin", "https://github.com/holyhope/digiposte-go-sdk")
 
 	document = new(Document)
 
 	return document, c.call(req, document)
 }
 
-func populateUploadForm( //nolint:nonamedreturns
-	formWriter *multipart.Writer,
+func uploadForm(
+	writer io.Writer,
 	docType DocumentType,
-	folderID ID,
+	folderID FolderID,
 	name string,
 	data io.Reader,
-) (finalErr error) {
+) (*multipart.Writer, error) {
+	formWriter := multipart.NewWriter(writer)
+
 	if err := formWriter.WriteField("health_document", strconv.FormatBool(docType == DocumentTypeHealth)); err != nil {
-		return fmt.Errorf("write health_document: %w", err)
+		return formWriter, fmt.Errorf("write health_document: %w", err)
 	}
 
-	if err := formWriter.WriteField("folder_id", string(folderID)); err != nil {
-		return fmt.Errorf("write folder_id: %w", err)
+	if folderID != "" {
+		if err := formWriter.WriteField("folder_id", string(folderID)); err != nil {
+			return formWriter, fmt.Errorf("write folder_id: %w", err)
+		}
 	}
 
 	if err := formWriter.WriteField("title", name); err != nil {
-		return fmt.Errorf("write title: %w", err)
+		return formWriter, fmt.Errorf("write title: %w", err)
 	}
 
 	documentUploadStream, err := formWriter.CreateFormFile("archive", name)
 	if err != nil {
-		return fmt.Errorf("create archive file: %w", err)
+		return formWriter, fmt.Errorf("create archive file: %w", err)
 	}
 
-	sizeStream, err := formWriter.CreateFormField("archive_size")
+	size, err := io.Copy(documentUploadStream, data)
 	if err != nil {
-		return fmt.Errorf("create archive_size field: %w", err)
+		return formWriter, fmt.Errorf("copy archive file: %w", err)
 	}
 
-	go func(documentUploadStream, sizeStream io.Writer, content io.Reader) {
-		if err := upload(documentUploadStream, content, sizeStream); err != nil {
-			if finalErr == nil {
-				finalErr = &UploadError{Err: err, OriginalError: finalErr}
-			}
-		}
-	}(documentUploadStream, sizeStream, data)
-
-	return nil
-}
-
-func upload(documentUploadStream io.Writer, content io.Reader, sizeStream io.Writer) error {
-	size, err := io.Copy(documentUploadStream, content)
-	if err != nil {
-		return fmt.Errorf("copy: %w", err)
+	if err := formWriter.WriteField("archive_size", strconv.FormatInt(size, 10)); err != nil {
+		return formWriter, fmt.Errorf("write archive_size: %w", err)
 	}
 
-	if _, err := sizeStream.Write([]byte(strconv.FormatInt(size, 10))); err != nil {
-		return fmt.Errorf("write size: %w", err)
+	if err := formWriter.Close(); err != nil {
+		return formWriter, fmt.Errorf("close form writer: %w", err)
 	}
 
-	return nil
+	return formWriter, nil
 }
 
 // CloseWriterError represents an error during the closing of a writer.

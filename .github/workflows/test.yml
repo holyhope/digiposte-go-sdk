@@ -20,9 +20,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19'
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           install-mode: "binary"
           version: v1.55
           args: --timeout=30m
+
+  tests:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.19'
+
+      - name: Cache browser binaries
+        id: cache-browser
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/rod/browser
+          key: ${{ runner.os }}-rod-browser
+
+      - name: Test
+        run: go test -v ./v1/... -ginkgo.v
+        env:
+          DIGIPOSTE_API: ${{ vars.DIGIPOSTE_API }}
+          DIGIPOSTE_URL: ${{ vars.DIGIPOSTE_URL }}
+          DIGIPOSTE_USERNAME: ${{ secrets.DIGIPOSTE_USERNAME }}
+          DIGIPOSTE_PASSWORD: ${{ secrets.DIGIPOSTE_PASSWORD }}
+          DIGIPOSTE_OTP_SECRET: ${{ secrets.DIGIPOSTE_OTP_SECRET }}
+
+      - name: Get debug screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: screenshots
+          path: '**/*.png'

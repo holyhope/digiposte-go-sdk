@@ -10,9 +10,13 @@ import (
 	"time"
 )
 
+type FolderID digiposteID
+
+const RootFolderID FolderID = ""
+
 // Folder represents a Digiposte folder.
 type Folder struct {
-	InternalID    ID        `json:"id"`
+	InternalID    FolderID  `json:"id"`
 	Name          string    `json:"name"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
@@ -53,7 +57,7 @@ func (c *Client) GetTrashedFolders(ctx context.Context) (*SearchFoldersResult, e
 }
 
 // RenameFolder renames a folder.
-func (c *Client) RenameFolder(ctx context.Context, internalID ID, name string) (*Folder, error) {
+func (c *Client) RenameFolder(ctx context.Context, internalID FolderID, name string) (*Folder, error) {
 	endpoint := "/v3/folder/" + url.PathEscape(string(internalID)) + "/rename/" + url.PathEscape(name)
 
 	req, err := c.apiRequest(ctx, http.MethodPut, endpoint, nil)
@@ -67,7 +71,7 @@ func (c *Client) RenameFolder(ctx context.Context, internalID ID, name string) (
 }
 
 // CreateFolder creates a folder.
-func (c *Client) CreateFolder(ctx context.Context, parentID ID, name string) (*Folder, error) {
+func (c *Client) CreateFolder(ctx context.Context, parentID FolderID, name string) (*Folder, error) {
 	body, err := json.Marshal(map[string]interface{}{
 		"parent_id": parentID,
 		"name":      name,
@@ -76,7 +80,7 @@ func (c *Client) CreateFolder(ctx context.Context, parentID ID, name string) (*F
 		return nil, fmt.Errorf("marshal body: %w", err)
 	}
 
-	req, err := c.apiRequest(ctx, http.MethodPut, "/v3/folder", bytes.NewReader(body))
+	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/folder", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
