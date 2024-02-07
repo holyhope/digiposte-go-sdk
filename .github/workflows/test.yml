@@ -3,11 +3,20 @@
 # -*- compile-command: "yamllint -f parsable build.yml" -*-
 
 name: test
+
 on:
   push:
+    paths:
+      - '**.go'
+      - '!**_test.go'
+      - 'v1/**'
     branches:
       - main
   pull_request:
+    paths:
+      - '**.go'
+      - '!**_test.go'
+      - 'v1/**'
 
 permissions:
   contents: read
