@@ -14,6 +14,7 @@ import (
 	"golang.org/x/oauth2"
 
 	login "github.com/holyhope/digiposte-go-sdk/login"
+	"github.com/holyhope/digiposte-go-sdk/login/chrome"
 	"github.com/holyhope/digiposte-go-sdk/settings"
 )
 
@@ -37,8 +38,37 @@ type Config struct {
 	Credentials *login.Credentials
 }
 
+func (c *Config) SetupDefault() error {
+	if c.APIURL == "" {
+		c.APIURL = settings.DefaultAPIURL
+	}
+
+	if c.DocumentURL == "" {
+		c.DocumentURL = settings.DefaultDocumentURL
+	}
+
+	if c.LoginMethod == nil {
+		method, err := chrome.New()
+		if err != nil {
+			return fmt.Errorf("new chrome login method: %w", err)
+		}
+
+		c.LoginMethod = method
+	}
+
+	return nil
+}
+
 // NewAuthenticatedClient creates a new Digiposte client with the given credentials.
 func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Config) (*Client, error) {
+	if config == nil {
+		config = new(Config)
+	}
+
+	if err := config.SetupDefault(); err != nil {
+		return nil, fmt.Errorf("setup default config: %w", err)
+	}
+
 	token, cookies, err := config.LoginMethod.Login(ctx, config.Credentials)
 	if err != nil {
 		return nil, fmt.Errorf("login: %w", err)
