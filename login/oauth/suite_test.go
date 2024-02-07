@@ -1,4 +1,4 @@
-package login_test
+package oauth_test
 
 import (
 	"testing"
