@@ -1,4 +1,4 @@
-package login
+package oauth
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/go-oauth2/oauth2/v4/server"
 	"github.com/go-oauth2/oauth2/v4/store"
 
+	"github.com/holyhope/digiposte-go-sdk/login"
 	digiconfig "github.com/holyhope/digiposte-go-sdk/login/config"
 )
 
@@ -44,7 +45,7 @@ type Server struct {
 type Config struct {
 	Addr        string
 	Server      *server.Config
-	LoginMethod Method
+	LoginMethod login.Method
 	Logger      *log.Logger
 }
 
@@ -87,7 +88,7 @@ func (s *Server) RegisterUser(clientID, clientSecret, redirectURL, username, pas
 		return fmt.Errorf("set client: %w", err)
 	}
 
-	s.accessGenerator.SetCredentials(clientID, &Credentials{
+	s.accessGenerator.SetCredentials(clientID, &login.Credentials{
 		Username:  username,
 		Password:  password,
 		OTPSecret: otpSecret,

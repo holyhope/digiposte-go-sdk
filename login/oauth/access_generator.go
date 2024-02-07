@@ -1,4 +1,4 @@
-package login
+package oauth
 
 import (
 	"bytes"
@@ -13,13 +13,14 @@ import (
 	oauth2v4 "github.com/go-oauth2/oauth2/v4"
 	"golang.org/x/oauth2"
 
+	"github.com/holyhope/digiposte-go-sdk/login"
 	digiconfig "github.com/holyhope/digiposte-go-sdk/login/config"
 )
 
 // AccessGenerator is an oauth2.AccessGenerate that uses a LoginMethod to generate the access token.
 type AccessGenerator struct {
 	setter      digiconfig.Setter
-	loginMethod Method
+	loginMethod login.Method
 	credentials *sync.Map
 }
 
@@ -27,7 +28,7 @@ var _ oauth2v4.AccessGenerate = (*AccessGenerator)(nil)
 
 const RefreshTokenLength = 32
 
-func (ag *AccessGenerator) SetCredentials(clientID string, creds *Credentials) {
+func (ag *AccessGenerator) SetCredentials(clientID string, creds *login.Credentials) {
 	ag.credentials.Store(clientID, creds)
 }
 
@@ -74,10 +75,10 @@ func (ag *AccessGenerator) login(
 	ctx context.Context,
 	generateBasic *oauth2v4.GenerateBasic,
 ) (*oauth2.Token, []*http.Cookie, error) {
-	var creds *Credentials
+	var creds *login.Credentials
 
 	if value, ok := ag.credentials.Load(generateBasic.Client.GetID()); ok {
-		value, ok := value.(*Credentials)
+		value, ok := value.(*login.Credentials)
 		if !ok {
 			return nil, nil, &InvalidCredentialsError{value: value}
 		}
@@ -107,7 +108,7 @@ func (e *InvalidCredentialsError) Error() string {
 
 var ErrNilCredentials = errors.New("nil credentials")
 
-func areCredentialsValid(creds *Credentials) error {
+func areCredentialsValid(creds *login.Credentials) error {
 	if creds == nil {
 		return ErrNilCredentials
 	}

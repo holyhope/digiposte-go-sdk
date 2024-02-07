@@ -1,4 +1,4 @@
-package login_test
+package oauth_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	login "github.com/holyhope/digiposte-go-sdk/login"
 	digiconfig "github.com/holyhope/digiposte-go-sdk/login/config"
 	configfakes "github.com/holyhope/digiposte-go-sdk/login/config/configfakes"
+	oauth "github.com/holyhope/digiposte-go-sdk/login/oauth"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
@@ -30,7 +31,7 @@ const (
 var _ = Describe("Server", func() {
 	var (
 		setter      *configfakes.FakeSetter
-		oauthServer *login.Server
+		oauthServer *oauth.Server
 		testServer  *ghttp.Server
 		cfg         *oauth2.Config
 	)
@@ -66,9 +67,9 @@ var _ = Describe("Server", func() {
 				}}, nil
 		}
 
-		localServer, err := login.NewServer(
+		localServer, err := oauth.NewServer(
 			setter,
-			&login.Config{
+			&oauth.Config{
 				Addr:        ":0", // Random port
 				Server:      server.NewConfig(),
 				Logger:      log.New(GinkgoWriter, "", log.Lmsgprefix),
@@ -83,7 +84,7 @@ var _ = Describe("Server", func() {
 			Username, Password, OTPSecret,
 		)).To(Succeed())
 
-		go func(server *login.Server) {
+		go func(server *oauth.Server) {
 			defer GinkgoRecover()
 
 			Expect(server.Start()).To(Succeed())
