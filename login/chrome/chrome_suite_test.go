@@ -7,9 +7,9 @@ import (
 	"github.com/onsi/gomega"
 )
 
-func TestRcloneDigiposteLogin(t *testing.T) {
+func TestChrome(t *testing.T) {
 	t.Parallel()
 
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "RcloneDigiposteLogin Suite")
+	ginkgo.RunSpecs(t, "Chrome Suite")
 }
