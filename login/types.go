@@ -8,6 +8,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Credentials is the credentials to connect to digiposte.
 type Credentials struct {
 	Username  string
 	Password  string
