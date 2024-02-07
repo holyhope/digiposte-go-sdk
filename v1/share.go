@@ -28,15 +28,17 @@ type Share struct {
 	RecipientMails []string  `json:"recipient_mails"`
 }
 
+const timeFormat = `2006-01-02T15:04:05Z`
+
 // Share creates a share for a specific time period, with a title and a security code.
 func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, title, code string) (*Share, error) {
 	body := map[string]interface{}{
-		"start_date": startDate,
+		"start_date": startDate.UTC().Format(timeFormat),
 		"title":      title,
 	}
 
 	if !endDate.IsZero() {
-		body["end_date"] = endDate
+		body["end_date"] = endDate.UTC().Format(timeFormat)
 	}
 
 	if code != "" {
