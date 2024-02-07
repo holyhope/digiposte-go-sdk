@@ -18,28 +18,7 @@ on:
       - '!**_test.go'
       - 'v1/**'
 
-permissions:
-  contents: read
-  # Optional: allow read access to pull request. Use with `only-new-issues` option.
-  # pull-requests: read
-
 jobs:
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.19'
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          install-mode: "binary"
-          version: v1.55
-          args: --timeout=30m
-
   tests:
     name: test
     runs-on: ubuntu-latest
