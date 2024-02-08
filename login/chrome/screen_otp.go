@@ -2,6 +2,7 @@ package chrome
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,7 +37,7 @@ func (s *otpScreen) CurrentPageMatches(ctx context.Context) bool {
 	return len(nodeIDs) > 0
 }
 
-var errEmptyOTP = fmt.Errorf("empty OTP secret")
+var errEmptyOTP = errors.New("empty OTP secret")
 
 func (s *otpScreen) Do(ctx context.Context) error {
 	if s.Secret == "" {

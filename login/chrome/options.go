@@ -25,7 +25,7 @@ var chromeOpts = []cu.Option{ //nolint:gochecknoglobals
 	},
 }
 
-var errNegativeFreq = fmt.Errorf("frequency must be positive")
+var errNegativeFreq = errors.New("frequency must be positive")
 
 func WithRefreshFrequency(frequency time.Duration) login.Option { //nolint:ireturn
 	return &withRefreshFrequency{Frequency: frequency}
@@ -56,7 +56,7 @@ func (o *withRefreshFrequency) Validate() error {
 	return nil
 }
 
-var errNegativeTimeout = fmt.Errorf("timeout must be positive")
+var errNegativeTimeout = errors.New("timeout must be positive")
 
 func WithTimeout(timeout time.Duration) login.Option { //nolint:ireturn
 	return &withTimeout{Timeout: timeout}
