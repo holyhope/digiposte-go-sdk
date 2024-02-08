@@ -38,7 +38,7 @@ type Config struct {
 	Credentials *login.Credentials
 }
 
-func (c *Config) SetupDefault() error {
+func (c *Config) SetupDefault(ctx context.Context) error {
 	if c.APIURL == "" {
 		c.APIURL = settings.DefaultAPIURL
 	}
@@ -48,7 +48,7 @@ func (c *Config) SetupDefault() error {
 	}
 
 	if c.LoginMethod == nil {
-		method, err := chrome.New()
+		method, err := chrome.New(chrome.WithChromeVersion(ctx, 0, nil))
 		if err != nil {
 			return fmt.Errorf("new chrome login method: %w", err)
 		}
@@ -65,7 +65,7 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 		config = new(Config)
 	}
 
-	if err := config.SetupDefault(); err != nil {
+	if err := config.SetupDefault(ctx); err != nil {
 		return nil, fmt.Errorf("setup default config: %w", err)
 	}
 

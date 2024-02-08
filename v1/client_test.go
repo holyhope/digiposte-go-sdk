@@ -42,10 +42,10 @@ var _ = ginkgo.Describe("Client", func() {
 
 var _ = ginkgo.Describe("Config", func() {
 	ginkgo.Describe("SetupDefault", func() {
-		ginkgo.It("Should work", func() {
+		ginkgo.It("Should work", func(ctx ginkgo.SpecContext) {
 			var config digiposte.Config
 
-			gomega.Expect(config.SetupDefault()).To(gomega.Succeed())
+			gomega.Expect(config.SetupDefault(ctx)).To(gomega.Succeed())
 			gomega.Expect(config.APIURL).To(gomega.Equal(settings.DefaultAPIURL))
 			gomega.Expect(config.DocumentURL).To(gomega.Equal(settings.DefaultDocumentURL))
 			gomega.Expect(config.LoginMethod).ToNot(gomega.BeNil())
