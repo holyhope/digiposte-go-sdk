@@ -24,11 +24,9 @@ linters-settings:
   depguard:
     # Default: Only allow $gostd in all files.
     rules:
-      # Name of a rule.
-      main:
+      login:
         files:
-        - "$all"
-        - "!$test"
+          - "login/**.go"
         list-mode: lax
         allow:
           - $gostd
@@ -37,6 +35,7 @@ linters-settings:
           - github.com/Davincible/chromedp-undetected
           - github.com/go-oauth2/oauth2/v4
           - github.com/pquerna/otp
+          - github.com/go-rod/rod/lib/launcher
 
       # Name of a rule.
       tests:
@@ -48,5 +47,4 @@ linters-settings:
           - github.com/holyhope
           - github.com/onsi/ginkgo
           - github.com/onsi/gomega
-          - github.com/go-oauth2/oauth2/v4
           - github.com/go-rod/rod/lib/launcher

@@ -1,9 +1,9 @@
 # digiposte-go-sdk
 
-This repository contains the Go SDK for the [Digiposte](https://digiposte.fr) API.
-
 ![Continuous Integration](https://github.com/holyhope/digiposte-go-sdk/actions/workflows/test.yml/badge.svg)
-[![Go Reference](https://pkg.go.dev/badge/github.com/holyhope/digiposte-go-sdk.svg)](https://pkg.go.dev/github.com/holyhope/digiposte-go-sdk)
+[![Go References](https://pkg.go.dev/badge/github.com/holyhope/digiposte-go-sdk.svg)](https://pkg.go.dev/github.com/holyhope/digiposte-go-sdk)
+
+This repository contains the Go SDK for the [Digiposte](https://digiposte.fr) API.
 
 It is a work in progress, and all the API endpoints are not implemented yet.
 

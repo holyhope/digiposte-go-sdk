@@ -1,6 +1,7 @@
 package chrome
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	cu "github.com/Davincible/chromedp-undetected"
+	"github.com/go-rod/rod/lib/launcher"
 
 	login "github.com/holyhope/digiposte-go-sdk/login"
 )
@@ -23,7 +25,7 @@ var chromeOpts = []cu.Option{ //nolint:gochecknoglobals
 	},
 }
 
-var errNegativeFreq = fmt.Errorf("frequency must be positive")
+var errNegativeFreq = errors.New("frequency must be positive")
 
 func WithRefreshFrequency(frequency time.Duration) login.Option { //nolint:ireturn
 	return &withRefreshFrequency{Frequency: frequency}
@@ -54,7 +56,7 @@ func (o *withRefreshFrequency) Validate() error {
 	return nil
 }
 
-var errNegativeTimeout = fmt.Errorf("timeout must be positive")
+var errNegativeTimeout = errors.New("timeout must be positive")
 
 func WithTimeout(timeout time.Duration) login.Option { //nolint:ireturn
 	return &withTimeout{Timeout: timeout}
@@ -213,6 +215,48 @@ func (o *withLoggers) Apply(instance interface{}) error {
 		if o.Error != nil {
 			chrome.errorLogger = o.Error
 		}
+
+		return nil
+	}
+
+	return &InvalidTypeOptionError{instance: instance}
+}
+
+func WithChromeVersion(ctx context.Context, revision int, client *http.Client) login.Option { //nolint:ireturn
+	browser := launcher.NewBrowser()
+	if ctx != nil {
+		browser.Context = ctx
+	}
+
+	if revision > 0 {
+		browser.Revision = revision
+	}
+
+	if client != nil {
+		browser.HTTPClient = client
+	}
+
+	return &withChromeVersion{Browser: browser}
+}
+
+type withChromeVersion struct {
+	Browser *launcher.Browser
+}
+
+func (o *withChromeVersion) Apply(instance interface{}) error {
+	if chrome, ok := instance.(*chromeLogin); ok {
+		o.Browser.Logger = chrome.infoLogger
+
+		path, err := o.Browser.Get()
+		if err != nil {
+			return fmt.Errorf("get browser: %w", err)
+		}
+
+		if err := o.Browser.Validate(); err != nil {
+			return fmt.Errorf("validate browser: %w", err)
+		}
+
+		chrome.binaryPath = path
 
 		return nil
 	}
