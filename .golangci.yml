@@ -4,7 +4,6 @@ linters:
   enable-all: true
   disable:
     - tagliatelle # Digiposte API is not consistent, it use snake_case and camelCase
-    - nosnakecase
 
 linters-settings:
   # Gci controls Go package import order and makes it always deterministic.
@@ -48,3 +47,9 @@ linters-settings:
           - github.com/onsi/ginkgo
           - github.com/onsi/gomega
           - github.com/go-rod/rod/lib/launcher
+
+issues:
+  exclude-rules:
+    - path: _example_test\.go
+      linters:
+        - nosnakecase

@@ -7,11 +7,13 @@ name: test
 on:
   push:
     paths:
+      - '.golangci.yml'
       - '**.go'
     branches:
       - main
   pull_request:
     paths:
+      - '.golangci.yml'
       - '**.go'
 
 permissions:
@@ -33,5 +35,5 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           install-mode: "binary"
-          version: v1.55
+          version: v1.56
           args: --timeout=30m
