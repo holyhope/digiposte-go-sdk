@@ -18,6 +18,10 @@ on:
       - '!**_test.go'
       - 'v1/**'
 
+on:
+  schedule:
+    - cron: '13 13 * * 1'
+
 jobs:
   tests:
     name: test
