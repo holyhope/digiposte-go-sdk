@@ -37,17 +37,19 @@ func Example() { //nolint:funlen
 	)
 
 	defer func(ctx context.Context) {
-		if err := client.Trash(ctx, documents, folders); err != nil {
-			panic(fmt.Errorf("trash: %w", err))
-		}
-
-		fmt.Printf("Trashed %d document(s)\n", len(documents))
-
 		if err := client.Delete(ctx, documents, folders); err != nil {
 			panic(fmt.Errorf("cleanup: %w", err))
 		}
 
-		fmt.Printf("Permanently deleted %d document(s)\n", len(documents))
+		fmt.Printf("Permanently deleted %d document(s) and %d folder(s)\n", len(documents), len(folders))
+	}(context.Background())
+
+	defer func(ctx context.Context) {
+		if err := client.Trash(ctx, documents, folders); err != nil {
+			panic(fmt.Errorf("trash: %w", err))
+		}
+
+		fmt.Printf("Trashed %d document(s) and %d folder(s)\n", len(documents), len(folders))
 	}(context.Background())
 
 	/* Create a folder */
