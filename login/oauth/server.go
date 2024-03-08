@@ -114,7 +114,7 @@ func newServer(manager oauth2.Manager, config *server.Config, listener net.Liste
 
 	oauthServer.SetAllowGetAccessRequest(true)
 
-	oauthServer.UserAuthorizationHandler = func(w http.ResponseWriter, r *http.Request) (string, error) {
+	oauthServer.UserAuthorizationHandler = func(_ http.ResponseWriter, r *http.Request) (string, error) {
 		if err := r.ParseForm(); err != nil {
 			return "", oautherrs.ErrInvalidRequest
 		}
