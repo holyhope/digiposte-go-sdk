@@ -47,7 +47,7 @@ var _ = Describe("Server", func() {
 			},
 		}
 
-		loginMethod := func(ctx context.Context, creds *login.Credentials) (*oauth2.Token, []*http.Cookie, error) {
+		loginMethod := func(_ context.Context, creds *login.Credentials) (*oauth2.Token, []*http.Cookie, error) {
 			Expect(creds).To(Equal(&login.Credentials{
 				Username:  Username,
 				Password:  Password,

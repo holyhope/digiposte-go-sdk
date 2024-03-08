@@ -101,7 +101,7 @@ func (c *chromeMethod) newChromeLogin(
 			c.ContextOptions = append(c.ContextOptions,
 				chromedp.WithErrorf(chrome.errorLogger.Printf),
 				chromedp.WithLogf(chrome.infoLogger.Printf),
-				chromedp.WithDebugf(func(s string, i ...interface{}) {
+				chromedp.WithDebugf(func(_ string, _ ...interface{}) {
 					// do nothing
 				}),
 			)

@@ -29,7 +29,7 @@ func Example() { //nolint:funlen
 		panic(fmt.Errorf("new digiposte client: %w", err))
 	}
 
-	/* Handle the cleanup of the created folder and document */
+	/* Handle the cleanup of the created folders and documents */
 
 	var (
 		folders   []digiposte.FolderID
@@ -37,17 +37,19 @@ func Example() { //nolint:funlen
 	)
 
 	defer func(ctx context.Context) {
-		if err := client.Trash(ctx, documents, folders); err != nil {
-			panic(fmt.Errorf("trash: %w", err))
-		}
-
-		fmt.Printf("Trashed %d document(s)\n", len(documents))
-
 		if err := client.Delete(ctx, documents, folders); err != nil {
-			panic(fmt.Errorf("cleanup: %w", err))
+			panic(fmt.Errorf("cleanup (documents %+v, folders %+v): %w", documents, folders, err))
 		}
 
-		fmt.Printf("Permanently deleted %d document(s)\n", len(documents))
+		fmt.Printf("Permanently deleted %d document(s) and %d folder(s)\n", len(documents), len(folders))
+	}(context.Background())
+
+	defer func(ctx context.Context) {
+		if err := client.Trash(ctx, documents, folders); err != nil {
+			panic(fmt.Errorf("trash (documents %+v, folders %+v): %w", documents, folders, err))
+		}
+
+		fmt.Printf("Trashed %d document(s) and %d folder(s)\n", len(documents), len(folders))
 	}(context.Background())
 
 	/* Create a folder */
@@ -103,6 +105,6 @@ func Example() { //nolint:funlen
 	// Document "document.txt" created
 	// Document content type: text/plain;charset=UTF-8
 	// Document size: 134 bytes
-	// Trashed 1 document(s)
-	// Permanently deleted 1 document(s)
+	// Trashed 1 document(s) and 1 folder(s)
+	// Permanently deleted 1 document(s) and 1 folder(s)
 }

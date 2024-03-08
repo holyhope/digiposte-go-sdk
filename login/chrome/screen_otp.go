@@ -56,7 +56,7 @@ func (s *otpScreen) Do(ctx context.Context) error {
 
 	if err := (&chromedp.Tasks{
 		// OTP not enabled, skip the screen
-		chromedp.QueryAfter(`#linkLater`, func(ctx context.Context, eci runtime.ExecutionContextID, n ...*cdp.Node) error {
+		chromedp.QueryAfter(`#linkLater`, func(ctx context.Context, _ runtime.ExecutionContextID, n ...*cdp.Node) error {
 			if len(n) == 0 {
 				return nil
 			}
