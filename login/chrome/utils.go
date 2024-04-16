@@ -1,10 +1,6 @@
-package chrome //nolint:testpackage
+package chrome
 
 import "fmt"
-
-func (e *WithScreenshotError) GomegaString() string {
-	return fmt.Sprintf("screenshot: %v", byteCountSI(len(e.Screenshot)))
-}
 
 func byteCountSI(byteCount int) string {
 	const unit = 1000

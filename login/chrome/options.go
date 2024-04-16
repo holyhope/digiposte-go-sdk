@@ -199,6 +199,10 @@ func (e *WithScreenshotError) Unwrap() error {
 	return e.Err
 }
 
+func (e *WithScreenshotError) String() string {
+	return fmt.Sprintf("error: %v\nscreenshot: %s", e.Err, byteCountSI(len(e.Screenshot)))
+}
+
 // WithLoggers sets the loggers to be used for the login process.
 func WithLoggers(infoLgr, errorLgr *log.Logger) login.Option { //nolint:ireturn
 	return &withLoggers{

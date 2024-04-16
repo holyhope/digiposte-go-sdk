@@ -8,9 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/chromedp/chromedp"
 	"golang.org/x/oauth2"
 
-	"github.com/chromedp/chromedp"
 	"github.com/holyhope/digiposte-go-sdk/login"
 )
 
