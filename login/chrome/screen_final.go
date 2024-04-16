@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
-	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"golang.org/x/oauth2"
@@ -25,17 +25,24 @@ func (s *finalScreen) String() string {
 }
 
 func (s *finalScreen) CurrentPageMatches(ctx context.Context) bool {
-	var nodeIDs []cdp.NodeID
+	var currentLocation string
 
 	if err := chromedp.Run(ctx,
-		chromedp.NodeIDs(`#popin_tc_privacy_button`, &nodeIDs, chromedp.ByID, chromedp.AtLeast(0)),
+		chromedp.Location(&currentLocation),
 	); err != nil {
 		errorLogger(ctx).Printf("run: %v\n", err)
 
 		return false
 	}
 
-	return len(nodeIDs) > 0
+	currentURL, err := url.Parse(currentLocation)
+	if err != nil {
+		errorLogger(ctx).Printf("parse current location: %v\n", err)
+
+		return false
+	}
+
+	return currentURL.Path == "/home"
 }
 
 type InvalidTokenError struct {
