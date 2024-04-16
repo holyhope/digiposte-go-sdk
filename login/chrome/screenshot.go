@@ -8,10 +8,12 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-func (c *chromeLogin) ScreenshotIfNeeded(ctx context.Context, errPtr *error) {
-	if c.screenShortOnError && *errPtr != nil {
-		*errPtr = c.wrapWithScreenshot(ctx, *errPtr)
+func (c *chromeLogin) ScreenshotIfNeeded(ctx context.Context, err error) error {
+	if !c.screenShortOnError {
+		return err
 	}
+
+	return c.wrapWithScreenshot(ctx, err)
 }
 
 func (c *chromeLogin) wrapWithScreenshot(ctx context.Context, rootErr error) error {
