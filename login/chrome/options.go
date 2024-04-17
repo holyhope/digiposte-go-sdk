@@ -27,6 +27,7 @@ var chromeOpts = []cu.Option{ //nolint:gochecknoglobals
 
 var errNegativeFreq = errors.New("frequency must be positive")
 
+// WithRefreshFrequency sets the frequency at which the login process will be refreshed.
 func WithRefreshFrequency(frequency time.Duration) login.Option { //nolint:ireturn
 	return &withRefreshFrequency{Frequency: frequency}
 }
@@ -58,6 +59,7 @@ func (o *withRefreshFrequency) Validate() error {
 
 var errNegativeTimeout = errors.New("timeout must be positive")
 
+// WithTimeout sets the timeout for the login process.
 func WithTimeout(timeout time.Duration) login.Option { //nolint:ireturn
 	return &withTimeout{Timeout: timeout}
 }
@@ -89,6 +91,7 @@ func (o *withTimeout) Validate() error {
 
 var errEmptyURL = errors.New("url is empty")
 
+// WithURL sets the URL to which the login process will be directed.
 func WithURL(url string) login.Option { //nolint:ireturn
 	return &withURL{URL: url}
 }
@@ -118,6 +121,7 @@ func (o *withURL) Apply(instance interface{}) error {
 	return &InvalidTypeOptionError{instance: instance}
 }
 
+// WithCookies sets the cookies to be used for the login process.
 func WithCookies(cookies []*http.Cookie) login.Option { //nolint:ireturn
 	return &withCookies{Cookies: cookies}
 }
@@ -136,6 +140,7 @@ func (o *withCookies) Apply(instance interface{}) error {
 	return &InvalidTypeOptionError{instance: instance}
 }
 
+// WithScreenShortOnError sets the option to take a screenshot when an error occurs.
 func WithScreenShortOnError() login.Option { //nolint:ireturn
 	return &withScreenShortOnError{}
 }
@@ -194,6 +199,7 @@ func (e *WithScreenshotError) Unwrap() error {
 	return e.Err
 }
 
+// WithLoggers sets the loggers to be used for the login process.
 func WithLoggers(infoLgr, errorLgr *log.Logger) login.Option { //nolint:ireturn
 	return &withLoggers{
 		Info:  infoLgr,
@@ -222,6 +228,7 @@ func (o *withLoggers) Apply(instance interface{}) error {
 	return &InvalidTypeOptionError{instance: instance}
 }
 
+// WithChromeVersion sets the version of chrome to be used for the login process.
 func WithChromeVersion(ctx context.Context, revision int, client *http.Client) login.Option { //nolint:ireturn
 	browser := launcher.NewBrowser()
 	if ctx != nil {
@@ -264,6 +271,7 @@ func (o *withChromeVersion) Apply(instance interface{}) error {
 	return &InvalidTypeOptionError{instance: instance}
 }
 
+// WithBinary sets the path to the chrome binary to be used for the login process.
 func WithBinary(path string) login.Option { //nolint:ireturn
 	return &withBinary{Path: path}
 }

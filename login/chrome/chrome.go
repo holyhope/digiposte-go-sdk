@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/chromedp/chromedp"
 	"golang.org/x/oauth2"
 
 	"github.com/holyhope/digiposte-go-sdk/login"
@@ -27,7 +28,7 @@ func (c *chromeLogin) login( //nolint:nonamedreturns
 	ctx, cancel := WithCancelOnClose(independentChromeCtx, parentCtx.Done())
 	defer cancel()
 
-	defer c.ScreenshotIfNeeded(independentChromeCtx, &finalErr)
+	defer c.WrapError(independentChromeCtx, &finalErr)
 
 	if err := resolve(ctx, &firstScreen{
 		URL: c.url,
@@ -38,6 +39,36 @@ func (c *chromeLogin) login( //nolint:nonamedreturns
 	infoLogger(ctx).Printf("Page %q loaded\n", c.url)
 
 	return c.resolveLogin(ctx, creds)
+}
+
+type WithLocationError struct {
+	Err      error
+	Location string
+}
+
+func (e *WithLocationError) Error() string {
+	return fmt.Sprintf("%v at %q", e.Err, e.Location)
+}
+
+func (c *chromeLogin) WrapError(ctx context.Context, errPtr *error) {
+	if *errPtr == nil {
+		return
+	}
+
+	var currentLocation string
+
+	if err := chromedp.Run(ctx,
+		chromedp.Location(&currentLocation),
+	); err != nil {
+		errorLogger(ctx).Printf("Failed to get current location: %v\n", err)
+	} else {
+		*errPtr = &WithLocationError{
+			Err:      *errPtr,
+			Location: currentLocation,
+		}
+	}
+
+	*errPtr = c.ScreenshotIfNeeded(ctx, *errPtr)
 }
 
 func WithCancelOnClose(ctx context.Context, done <-chan struct{}) (context.Context, context.CancelFunc) {
