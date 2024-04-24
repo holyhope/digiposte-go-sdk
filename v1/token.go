@@ -34,6 +34,20 @@ func (t *AccessToken) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (t *AccessToken) MarshalJSON() ([]byte, error) {
+	aux := struct {
+		Token               string  `json:"access_token"`
+		ExpiresAt           float64 `json:"expires_at"`
+		IsTokenConsolidated bool    `json:"is_token_consolidated"`
+	}{
+		Token:               t.Token,
+		ExpiresAt:           utils.Time2UnixFloat(t.ExpiresAt),
+		IsTokenConsolidated: t.IsTokenConsolidated,
+	}
+
+	return json.Marshal(aux)
+}
+
 // Token returns a actoken.
 func (c *Client) AccessToken(ctx context.Context) (*AccessToken, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.documentURL+"/rest/security/token", nil)

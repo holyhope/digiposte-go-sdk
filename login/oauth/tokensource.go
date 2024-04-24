@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -39,3 +40,28 @@ func (ts *TokenSource) Token() (*oauth2.Token, error) {
 
 	return token, nil
 }
+
+type CombinedTokenSources []oauth2.TokenSource
+
+func (ts CombinedTokenSources) Token() (*oauth2.Token, error) {
+	if len(ts) == 0 {
+		return nil, ErrNoTokenSources
+	}
+
+	var errs []error
+
+	for i, t := range ts {
+		token, err := t.Token()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("source %d: %w", i+1, err))
+		}
+
+		if token.Valid() {
+			return token, nil
+		}
+	}
+
+	return nil, errors.Join(errs...)
+}
+
+var ErrNoTokenSources = errors.New("no token sources")
