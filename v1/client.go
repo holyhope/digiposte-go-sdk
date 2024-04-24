@@ -31,6 +31,13 @@ func NewClient(client *http.Client) *Client {
 	return NewCustomClient(settings.DefaultAPIURL, settings.DefaultDocumentURL, client)
 }
 
+// Session represents a Digiposte session.
+type Session struct {
+	Token   *oauth2.Token
+	Cookies []*http.Cookie
+}
+
+// Config is the configuration of a Digiposte client.
 type Config struct {
 	APIURL      string
 	DocumentURL string
@@ -38,9 +45,12 @@ type Config struct {
 	LoginMethod login.Method
 	Credentials *login.Credentials
 
-	SessionListener func(token *oauth2.Token, cookies []*http.Cookie)
+	SessionListener func(session *Session)
+
+	PreviousSession *Session
 }
 
+// SetupDefault sets up the default values of the configuration.
 func (c *Config) SetupDefault(ctx context.Context) error {
 	if c.APIURL == "" {
 		c.APIURL = settings.DefaultAPIURL
@@ -60,7 +70,11 @@ func (c *Config) SetupDefault(ctx context.Context) error {
 	}
 
 	if c.SessionListener == nil {
-		c.SessionListener = func(_ *oauth2.Token, _ []*http.Cookie) {}
+		c.SessionListener = func(_ *Session) {}
+	}
+
+	if c.PreviousSession == nil {
+		c.PreviousSession = new(Session)
 	}
 
 	return nil
@@ -88,15 +102,20 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 		}
 	}
 
+	client.Jar.SetCookies(documentURL, config.PreviousSession.Cookies)
+
 	client.Transport = &oauth2.Transport{
 		Base: client.Transport,
-		Source: oauth2.ReuseTokenSource(nil, &oauth.TokenSource{
+		Source: oauth2.ReuseTokenSource(config.PreviousSession.Token, &oauth.TokenSource{
 			LoginMethod: config.LoginMethod,
 			Credentials: config.Credentials,
 			Listener: func(token *oauth2.Token, cookies []*http.Cookie) {
 				client.Jar.SetCookies(documentURL, cookies)
 
-				config.SessionListener(token, cookies)
+				config.SessionListener(&Session{
+					Token:   token,
+					Cookies: cookies,
+				})
 			},
 		}),
 	}

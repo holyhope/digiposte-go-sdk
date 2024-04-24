@@ -73,6 +73,7 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 			OTPSecret: os.Getenv("DIGIPOSTE_OTP_SECRET"),
 		},
 		SessionListener: nil,
+		PreviousSession: nil,
 	})
 	if err != nil {
 		screenshot, ok := chrome.GetScreenShot(err)
