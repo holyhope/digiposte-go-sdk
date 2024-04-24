@@ -24,7 +24,7 @@ var _ = ginkgo.FDescribe("Oauth", func() {
 		server = ghttp.NewServer()
 		ginkgo.DeferCleanup(server.Close)
 
-		c, err := digiposte.NewAuthenticatedClient(ctx, http.DefaultClient, &digiposte.Config{
+		authenticatedClient, err := digiposte.NewAuthenticatedClient(ctx, http.DefaultClient, &digiposte.Config{
 			APIURL:      server.URL(),
 			DocumentURL: server.URL(),
 			Credentials: nil,
@@ -41,9 +41,9 @@ var _ = ginkgo.FDescribe("Oauth", func() {
 			PreviousSession: nil,
 		})
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-		gomega.Expect(c).ToNot(gomega.BeNil())
+		gomega.Expect(authenticatedClient).ToNot(gomega.BeNil())
 
-		client = c
+		client = authenticatedClient
 	})
 
 	ginkgo.Describe("NewAuthenticatedClient", func() {

@@ -33,10 +33,3 @@ func (ts *TokenSource) Token() (*oauth2.Token, error) {
 		RefreshToken: "",
 	}, nil
 }
-
-// TokenSource returns a token source that uses the client to get the oauth token.
-func (c *Client) TokenSource() oauth2.TokenSource {
-	return oauth2.ReuseTokenSource(nil, &TokenSource{
-		Client: c,
-	})
-}

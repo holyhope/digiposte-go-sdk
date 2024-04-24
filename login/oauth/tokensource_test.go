@@ -94,12 +94,12 @@ var _ = ginkgo.Describe("CombinedTokenSources", func() {
 			tokenSources = oauth.CombinedTokenSources{
 				&MockedTokenSource{
 					TokenSource: func() (*oauth2.Token, error) {
-						return nil, fmt.Errorf("error 1")
+						return nil, &idError{ID: 1}
 					},
 				},
 				&MockedTokenSource{
 					TokenSource: func() (*oauth2.Token, error) {
-						return nil, fmt.Errorf("error 2")
+						return nil, &idError{ID: 2}
 					},
 				},
 			}
@@ -118,12 +118,12 @@ var _ = ginkgo.Describe("CombinedTokenSources", func() {
 			tokenSources = oauth.CombinedTokenSources{
 				&MockedTokenSource{
 					TokenSource: func() (*oauth2.Token, error) {
-						return nil, fmt.Errorf("error 1")
+						return nil, &idError{ID: 1}
 					},
 				},
 				&MockedTokenSource{
 					TokenSource: func() (*oauth2.Token, error) {
-						return nil, fmt.Errorf("error 2")
+						return nil, &idError{ID: 2}
 					},
 				},
 				&MockedTokenSource{
@@ -178,4 +178,12 @@ var _ login.Method = (*MockedLoginMethod)(nil)
 
 func (mts *MockedTokenSource) Token() (*oauth2.Token, error) {
 	return mts.TokenSource()
+}
+
+type idError struct {
+	ID int
+}
+
+func (e *idError) Error() string {
+	return fmt.Sprintf("error %d", e.ID)
 }

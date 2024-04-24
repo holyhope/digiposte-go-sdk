@@ -104,9 +104,17 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 
 	client.Jar.SetCookies(documentURL, config.PreviousSession.Cookies)
 
-	tokenSource := &TokenSource{}
+	tokenSource := &TokenSource{
+		// This client will be used to get the token
+		Client:     NewCustomClient(config.APIURL, config.DocumentURL, client),
+		GetContext: nil,
+	}
 
-	client.Transport = &oauth2.Transport{
+	authenticatedClient := new(http.Client)
+
+	*authenticatedClient = *client
+
+	authenticatedClient.Transport = &oauth2.Transport{
 		Base: client.Transport,
 		Source: oauth2.ReuseTokenSource(config.PreviousSession.Token, oauth.CombinedTokenSources{
 			tokenSource,
@@ -125,11 +133,7 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 		}),
 	}
 
-	digiposteClient := NewCustomClient(config.APIURL, config.DocumentURL, client)
-
-	tokenSource.Client = digiposteClient
-
-	return digiposteClient, nil
+	return NewCustomClient(config.APIURL, config.DocumentURL, authenticatedClient), nil
 }
 
 // NewClient creates a new Digiposte client.

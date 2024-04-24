@@ -45,7 +45,12 @@ func (t *AccessToken) MarshalJSON() ([]byte, error) {
 		IsTokenConsolidated: t.IsTokenConsolidated,
 	}
 
-	return json.Marshal(aux)
+	data, err := json.Marshal(aux)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+
+	return data, nil
 }
 
 // Token returns a actoken.
