@@ -38,7 +38,7 @@ type Config struct {
 	LoginMethod login.Method
 	Credentials *login.Credentials
 
-	SessionListener func(token string, cookies []*http.Cookie)
+	SessionListener func(token *oauth2.Token, cookies []*http.Cookie)
 }
 
 func (c *Config) SetupDefault(ctx context.Context) error {
@@ -60,7 +60,7 @@ func (c *Config) SetupDefault(ctx context.Context) error {
 	}
 
 	if c.SessionListener == nil {
-		c.SessionListener = func(_ string, _ []*http.Cookie) {}
+		c.SessionListener = func(_ *oauth2.Token, _ []*http.Cookie) {}
 	}
 
 	return nil
@@ -96,7 +96,7 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 			Listener: func(token *oauth2.Token, cookies []*http.Cookie) {
 				client.Jar.SetCookies(documentURL, cookies)
 
-				config.SessionListener(token.AccessToken, cookies)
+				config.SessionListener(token, cookies)
 			},
 		}),
 	}
