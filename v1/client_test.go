@@ -35,6 +35,7 @@ var _ = ginkgo.Describe("Client", func() {
 					},
 					Cookies: nil,
 				},
+				SessionListener: nil,
 			})).ToNot(gomega.BeNil())
 		})
 	})

@@ -15,6 +15,7 @@ import (
 
 	login "github.com/holyhope/digiposte-go-sdk/login"
 	"github.com/holyhope/digiposte-go-sdk/login/chrome"
+	"github.com/holyhope/digiposte-go-sdk/login/oauth"
 	"github.com/holyhope/digiposte-go-sdk/settings"
 )
 
@@ -36,6 +37,8 @@ type Config struct {
 
 	LoginMethod login.Method
 	Credentials *login.Credentials
+
+	SessionListener func(token string, cookies []*http.Cookie)
 }
 
 func (c *Config) SetupDefault(ctx context.Context) error {
@@ -56,6 +59,10 @@ func (c *Config) SetupDefault(ctx context.Context) error {
 		c.LoginMethod = method
 	}
 
+	if c.SessionListener == nil {
+		c.SessionListener = func(_ string, _ []*http.Cookie) {}
+	}
+
 	return nil
 }
 
@@ -67,11 +74,6 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 
 	if err := config.SetupDefault(ctx); err != nil {
 		return nil, fmt.Errorf("setup default config: %w", err)
-	}
-
-	token, cookies, err := config.LoginMethod.Login(ctx, config.Credentials)
-	if err != nil {
-		return nil, fmt.Errorf("login: %w", err)
 	}
 
 	documentURL, err := url.Parse(config.DocumentURL)
@@ -86,11 +88,17 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 		}
 	}
 
-	client.Jar.SetCookies(documentURL, cookies)
-
 	client.Transport = &oauth2.Transport{
-		Base:   client.Transport,
-		Source: oauth2.StaticTokenSource(token),
+		Base: client.Transport,
+		Source: oauth2.ReuseTokenSource(nil, &oauth.TokenSource{
+			LoginMethod: config.LoginMethod,
+			Credentials: config.Credentials,
+			Listener: func(token *oauth2.Token, cookies []*http.Cookie) {
+				client.Jar.SetCookies(documentURL, cookies)
+
+				config.SessionListener(token.AccessToken, cookies)
+			},
+		}),
 	}
 
 	return NewCustomClient(config.APIURL, config.DocumentURL, client), nil
