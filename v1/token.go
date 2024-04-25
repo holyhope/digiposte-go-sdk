@@ -53,7 +53,7 @@ func (t *AccessToken) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// Token returns a actoken.
+// AccessToken returns a new access token.
 func (c *Client) AccessToken(ctx context.Context) (*AccessToken, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.documentURL+"/rest/security/token", nil)
 	if err != nil {
