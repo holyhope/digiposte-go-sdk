@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-rod/rod/lib/launcher"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"golang.org/x/time/rate"
 
+	"github.com/holyhope/digiposte-go-sdk/internal/utils"
 	digipoauth "github.com/holyhope/digiposte-go-sdk/login"
 	"github.com/holyhope/digiposte-go-sdk/login/chrome"
 	"github.com/holyhope/digiposte-go-sdk/v1"
@@ -27,8 +27,6 @@ func DigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 		return digiposteClient, nil
 	}
 
-	// or use digiposte.DefaultDocumentURL
-	// Reduce the test duration
 	client, err := newDigiposteClient(ctx)
 	if err != nil {
 		return nil, err
@@ -40,16 +38,16 @@ func DigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 }
 
 func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
-	path, err := getChrome(ctx)
+	path, err := utils.GetChrome(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get chrome: %w", err)
 	}
 
-	documentURL := os.Getenv("DIGIPOSTE_URL")
+	documentURL := os.Getenv("DIGIPOSTE_URL") // or use digiposte.DefaultDocumentURL
 
 	chromeMethod, err := chrome.New(
 		chrome.WithURL(documentURL),
-		chrome.WithRefreshFrequency(500*time.Millisecond),
+		chrome.WithRefreshFrequency(500*time.Millisecond), // Reduce the test duration
 		chrome.WithScreenShortOnError(),
 		chrome.WithTimeout(3*time.Minute),
 		chrome.WithBinary(path),
@@ -58,15 +56,14 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 		return nil, fmt.Errorf("new chrome: %w", err)
 	}
 
-	client, err := digiposte.NewAuthenticatedClient(ctx, &http.Client{
-		CheckRedirect: nil,
-		Jar:           nil,
-		Timeout:       0,
-		Transport: &rateLimitedTransport{
-			RoundTripper: http.DefaultTransport,
-			rateLimiter:  rate.NewLimiter(rate.Every(1*time.Second), 5),
-		},
-	}, &digiposte.Config{
+	// Rate limit the requests to avoid being blocked
+	rateLimitedClient := *http.DefaultClient
+	rateLimitedClient.Transport = &rateLimitedTransport{
+		RoundTripper: http.DefaultTransport,
+		rateLimiter:  rate.NewLimiter(rate.Every(1*time.Second), 5),
+	}
+
+	client, err := digiposte.NewAuthenticatedClient(ctx, &rateLimitedClient, &digiposte.Config{
 		APIURL:      os.Getenv("DIGIPOSTE_API"),
 		DocumentURL: documentURL,
 		LoginMethod: chromeMethod,
@@ -75,6 +72,8 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 			Password:  os.Getenv("DIGIPOSTE_PASSWORD"),
 			OTPSecret: os.Getenv("DIGIPOSTE_OTP_SECRET"),
 		},
+		SessionListener: nil,
+		PreviousSession: nil,
 	})
 	if err != nil {
 		screenshot, ok := chrome.GetScreenShot(err)
@@ -90,23 +89,6 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 	}
 
 	return client, nil
-}
-
-func getChrome(ctx context.Context) (string, error) {
-	browser := launcher.NewBrowser()
-
-	browser.Context = ctx
-
-	path, err := browser.Get()
-	if err != nil {
-		return "", fmt.Errorf("browser download: %w", err)
-	}
-
-	if err := browser.Validate(); err != nil {
-		return "", fmt.Errorf("browser download validation: %w", err)
-	}
-
-	return path, nil
 }
 
 type rateLimitedTransport struct {

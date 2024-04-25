@@ -15,14 +15,16 @@ import (
 
 	login "github.com/holyhope/digiposte-go-sdk/login"
 	"github.com/holyhope/digiposte-go-sdk/login/chrome"
+	"github.com/holyhope/digiposte-go-sdk/login/oauth"
 	"github.com/holyhope/digiposte-go-sdk/settings"
 )
 
 // Client is a Digiposte client.
 type Client struct {
+	*clientHelper
+
 	apiURL      string
 	documentURL string
-	client      *http.Client
 }
 
 // NewClient creates a new Digiposte client.
@@ -30,14 +32,26 @@ func NewClient(client *http.Client) *Client {
 	return NewCustomClient(settings.DefaultAPIURL, settings.DefaultDocumentURL, client)
 }
 
+// Session represents a Digiposte session.
+type Session struct {
+	Token   *oauth2.Token
+	Cookies []*http.Cookie
+}
+
+// Config is the configuration of a Digiposte client.
 type Config struct {
 	APIURL      string
 	DocumentURL string
 
 	LoginMethod login.Method
 	Credentials *login.Credentials
+
+	SessionListener func(session *Session)
+
+	PreviousSession *Session
 }
 
+// SetupDefault sets up the default values of the configuration.
 func (c *Config) SetupDefault(ctx context.Context) error {
 	if c.APIURL == "" {
 		c.APIURL = settings.DefaultAPIURL
@@ -56,11 +70,19 @@ func (c *Config) SetupDefault(ctx context.Context) error {
 		c.LoginMethod = method
 	}
 
+	if c.SessionListener == nil {
+		c.SessionListener = func(_ *Session) {}
+	}
+
+	if c.PreviousSession == nil {
+		c.PreviousSession = new(Session)
+	}
+
 	return nil
 }
 
 // NewAuthenticatedClient creates a new Digiposte client with the given credentials.
-func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Config) (*Client, error) {
+func NewAuthenticatedClient(ctx context.Context, httpClient *http.Client, config *Config) (*Client, error) {
 	if config == nil {
 		config = new(Config)
 	}
@@ -69,39 +91,58 @@ func NewAuthenticatedClient(ctx context.Context, client *http.Client, config *Co
 		return nil, fmt.Errorf("setup default config: %w", err)
 	}
 
-	token, cookies, err := config.LoginMethod.Login(ctx, config.Credentials)
-	if err != nil {
-		return nil, fmt.Errorf("login: %w", err)
-	}
-
 	documentURL, err := url.Parse(config.DocumentURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse document URL: %w", err)
 	}
 
-	if client.Jar == nil {
-		client.Jar, err = cookiejar.New(nil)
+	if httpClient.Jar == nil {
+		httpClient.Jar, err = cookiejar.New(nil)
 		if err != nil {
 			return nil, fmt.Errorf("new cookie jar: %w", err)
 		}
 	}
 
-	client.Jar.SetCookies(documentURL, cookies)
+	httpClient.Jar.SetCookies(documentURL, config.PreviousSession.Cookies)
 
-	client.Transport = &oauth2.Transport{
-		Base:   client.Transport,
-		Source: oauth2.StaticTokenSource(token),
+	tokenSource := &TokenSource{
+		clientHelper: &clientHelper{client: httpClient},
+		DocumentURL:  config.DocumentURL,
+		GetContext:   nil,
 	}
 
-	return NewCustomClient(config.APIURL, config.DocumentURL, client), nil
+	authenticatedClient := new(http.Client)
+
+	*authenticatedClient = *httpClient
+
+	authenticatedClient.Transport = &oauth2.Transport{
+		Base: httpClient.Transport,
+		Source: oauth2.ReuseTokenSource(config.PreviousSession.Token, oauth.CombinedTokenSources{
+			tokenSource,
+			&oauth.TokenSource{
+				LoginMethod: config.LoginMethod,
+				Credentials: config.Credentials,
+				Listener: func(token *oauth2.Token, cookies []*http.Cookie) {
+					httpClient.Jar.SetCookies(documentURL, cookies)
+
+					config.SessionListener(&Session{
+						Token:   token,
+						Cookies: cookies,
+					})
+				},
+			},
+		}),
+	}
+
+	return NewCustomClient(config.APIURL, config.DocumentURL, authenticatedClient), nil
 }
 
 // NewClient creates a new Digiposte client.
-func NewCustomClient(apiURL, documentURL string, client *http.Client) *Client {
+func NewCustomClient(apiURL, documentURL string, c *http.Client) *Client {
 	return &Client{
-		apiURL:      strings.TrimRight(apiURL, "/"),
-		documentURL: strings.TrimRight(documentURL, "/"),
-		client:      client,
+		clientHelper: &clientHelper{client: c},
+		apiURL:       strings.TrimRight(apiURL, "/"),
+		documentURL:  strings.TrimRight(documentURL, "/"),
 	}
 }
 
@@ -157,38 +198,6 @@ func (e *RequestErrors) Error() string {
 	}
 
 	return strings.Join(strs, "\n")
-}
-
-func (c *Client) checkResponse(response *http.Response, expectedStatus int) error {
-	if response.StatusCode != expectedStatus {
-		errs := new(RequestErrors)
-
-		content, err := io.ReadAll(response.Body)
-		if err != nil {
-			return fmt.Errorf("HTTP %s: failed to read response body: %w", response.Status, err)
-		}
-
-		if err := json.Unmarshal(content, errs); err != nil {
-			context := map[string]interface{}{
-				"content":      content,
-				"decode_error": err,
-			}
-
-			if contentType := response.Header.Get("Content-Type"); contentType != "" {
-				context["content-type"] = contentType
-			}
-
-			return &RequestErrors{{
-				ErrorCode: response.Status,
-				ErrorDesc: "failed to decode error response",
-				Context:   context,
-			}}
-		}
-
-		return fmt.Errorf("HTTP %s: %w", response.Status, errs)
-	}
-
-	return nil
 }
 
 // Trash move trashes the given documents and folders to the trash.
@@ -251,7 +260,21 @@ func (c *Client) Move(ctx context.Context, destID FolderID, documentIDs []Docume
 	return c.call(req, nil)
 }
 
-func (c *Client) call(req *http.Request, result interface{}) (finalErr error) {
+// Logout logs out the user.
+func (c *Client) Logout(ctx context.Context) error {
+	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/profile/logout", nil)
+	if err != nil {
+		return fmt.Errorf("new request: %w", err)
+	}
+
+	return c.call(req, nil)
+}
+
+type clientHelper struct {
+	client *http.Client
+}
+
+func (c *clientHelper) call(req *http.Request, result interface{}) (finalErr error) {
 	response, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to request %q: %w", req.URL, err)
@@ -283,12 +306,34 @@ func (c *Client) call(req *http.Request, result interface{}) (finalErr error) {
 	return nil
 }
 
-// Logout logs out the user.
-func (c *Client) Logout(ctx context.Context) error {
-	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/profile/logout", nil)
-	if err != nil {
-		return fmt.Errorf("new request: %w", err)
+func (c *clientHelper) checkResponse(response *http.Response, expectedStatus int) error {
+	if response.StatusCode != expectedStatus {
+		errs := new(RequestErrors)
+
+		content, err := io.ReadAll(response.Body)
+		if err != nil {
+			return fmt.Errorf("HTTP %s: failed to read response body: %w", response.Status, err)
+		}
+
+		if err := json.Unmarshal(content, errs); err != nil {
+			context := map[string]interface{}{
+				"content":      content,
+				"decode_error": err,
+			}
+
+			if contentType := response.Header.Get("Content-Type"); contentType != "" {
+				context["content-type"] = contentType
+			}
+
+			return &RequestErrors{{
+				ErrorCode: response.Status,
+				ErrorDesc: "failed to decode error response",
+				Context:   context,
+			}}
+		}
+
+		return fmt.Errorf("HTTP %s: %w", response.Status, errs)
 	}
 
-	return c.call(req, nil)
+	return nil
 }

@@ -22,3 +22,7 @@ func UnixFloat2Time(unix float64) time.Time {
 
 	return time.Unix(int64(sec), int64(nano))
 }
+
+func Time2UnixFloat(t time.Time) float64 {
+	return float64(t.Unix()) + float64(t.Nanosecond())/float64(time.Second/time.Nanosecond)
+}
