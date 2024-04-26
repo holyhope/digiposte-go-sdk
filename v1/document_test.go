@@ -3,11 +3,13 @@ package digiposte_test
 import (
 	"fmt"
 	"mime"
+	"net/http"
 	"strings"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gstruct"
 
 	"github.com/holyhope/digiposte-go-sdk/v1"
 )
@@ -89,6 +91,25 @@ var _ = ginkgo.Describe("Document", func() {
 				gomega.Expect(params).To(gomega.HaveKeyWithValue(
 					"charset", gomega.WithTransform(strings.ToLower, gomega.Equal("utf-8")),
 				))
+			})
+
+			ginkgo.Context("With a non-authenticated client", func() {
+				var client *digiposte.Client
+
+				ginkgo.BeforeEach(func() {
+					client = digiposte.NewClient(http.DefaultClient)
+				})
+
+				ginkgo.It("Should return an error", func(ctx ginkgo.SpecContext) {
+					_, _, err := client.DocumentContent(ctx, document.InternalID)
+					gomega.Expect(err).To(gomega.HaveOccurred())
+					gomega.Expect(err).To(gstruct.PointTo(gomega.ContainElement(
+						gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+							"ErrorCode": gomega.Equal("Unauthorized"),
+							"ErrorDesc": gomega.Equal("Redirected to the login page."),
+						}),
+					)))
+				})
 			})
 		})
 	})

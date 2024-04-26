@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -66,6 +67,14 @@ func (c *Client) ListDocuments(ctx context.Context) (*SearchDocumentsResult, err
 	return &result, c.call(req, &result)
 }
 
+type RedirectionError struct {
+	Location string
+}
+
+func (e *RedirectionError) Error() string {
+	return fmt.Sprintf("redirection stopped: %q", e.Location)
+}
+
 // DocumentContent returns the content of a document.
 func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) ( //nolint:nonamedreturns
 	contentBuffer io.ReadCloser,
@@ -91,6 +100,23 @@ func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) ( /
 	}()
 
 	contentType = response.Header.Get("Content-Type")
+
+	if response.StatusCode == http.StatusFound {
+		location, err := url.Parse(response.Header.Get("Location"))
+		if err != nil {
+			return nil, "", fmt.Errorf("parse location: %w", err)
+		}
+
+		if strings.HasSuffix(location.Path, "/v3/authorize") {
+			return nil, "", &RequestErrors{{
+				ErrorCode: http.StatusText(http.StatusUnauthorized),
+				ErrorDesc: "Redirected to the login page.",
+				Context:   map[string]interface{}{"response": response},
+			}}
+		}
+
+		return nil, "", &RedirectionError{Location: location.String()}
+	}
 
 	if err := c.checkResponse(response, http.StatusOK); err != nil {
 		return nil, contentType, fmt.Errorf("request to %q: %w", req.URL, err)
