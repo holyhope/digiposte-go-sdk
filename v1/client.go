@@ -138,9 +138,23 @@ func NewAuthenticatedClient(ctx context.Context, httpClient *http.Client, config
 }
 
 // NewClient creates a new Digiposte client.
-func NewCustomClient(apiURL, documentURL string, c *http.Client) *Client {
+func NewCustomClient(apiURL, documentURL string, client *http.Client) *Client {
+	if client.CheckRedirect == nil {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) == 0 {
+				panic("should not happen")
+			}
+
+			if req.URL.Host != via[len(via)-1].URL.Host {
+				return http.ErrUseLastResponse
+			}
+
+			return nil
+		}
+	}
+
 	return &Client{
-		clientHelper: &clientHelper{client: c},
+		clientHelper: &clientHelper{client: client},
 		apiURL:       strings.TrimRight(apiURL, "/"),
 		documentURL:  strings.TrimRight(documentURL, "/"),
 	}
