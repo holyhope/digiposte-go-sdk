@@ -48,6 +48,65 @@ var _ = ginkgo.Describe("Document", func() {
 		})
 	})
 
+	ginkgo.Describe("TagDocument", func() {
+		ginkgo.BeforeEach(func(ctx ginkgo.SpecContext) {
+			var err error
+
+			document, err = digiposteClient.CreateDocument(ctx,
+				digiposte.RootFolderID,
+				ginkgo.CurrentSpecReport().FullText(),
+				strings.NewReader("the content"),
+				digiposte.DocumentTypeBasic,
+			)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+			gomega.Expect(document.InternalID).ToNot(gomega.BeEmpty())
+		})
+
+		ginkgo.AfterEach(func(ctx ginkgo.SpecContext) {
+			if err := digiposteClient.Trash(ctx, []digiposte.DocumentID{document.InternalID}, nil); err != nil {
+				fmt.Fprintf(ginkgo.GinkgoWriter, "trash: %v\n", err)
+			}
+
+			if err := digiposteClient.Delete(ctx, []digiposte.DocumentID{document.InternalID}, nil); err != nil {
+				fmt.Fprintf(ginkgo.GinkgoWriter, "delete: %v\n", err)
+			}
+		})
+
+		ginkgo.It("Should tag the document", func(ctx ginkgo.SpecContext) {
+			tag := digiposte.DocumentTag(strings.ReplaceAll(strings.ToLower(ginkgo.CurrentSpecReport().FullText()), " ", "-"))
+
+			tagsBefore, err := digiposteClient.UserTags(ctx)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+			countBefore, ok := tagsBefore.Tags[tag]
+			if !ok {
+				countBefore = 0
+			}
+
+			gomega.Expect(digiposteClient.MultiTag(ctx, map[digiposte.DocumentID][]digiposte.DocumentTag{document.InternalID: {
+				tag,
+			}})).To(gomega.Succeed())
+
+			gomega.Eventually(func() *digiposte.UserTags {
+				result, err := digiposteClient.UserTags(ctx)
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+				return result
+			}).Should(gstruct.PointTo(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+				"Tags": gomega.HaveKeyWithValue(tag, countBefore+1),
+			})))
+
+			result, err := digiposteClient.SearchDocuments(ctx, digiposte.RootFolderID, digiposte.DocumentTaggedWith(tag))
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+			gomega.Expect(result.Documents).To(gomega.ConsistOf(gstruct.PointTo(
+				gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+					"InternalID": gomega.BeEquivalentTo(document.InternalID),
+					"UserTags":   gomega.ContainElement(gomega.BeEquivalentTo(tag)),
+				})),
+			))
+		})
+	})
+
 	ginkgo.Describe("DocumentContent", func() {
 		ginkgo.Context("When the document does not exist", func() {
 			ginkgo.BeforeEach(func() {

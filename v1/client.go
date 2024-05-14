@@ -288,7 +288,7 @@ type clientHelper struct {
 	client *http.Client
 }
 
-func (c *clientHelper) call(req *http.Request, result interface{}) (finalErr error) {
+func (c *clientHelper) call(req *http.Request, result interface{}, expectedStatuses ...int) (finalErr error) {
 	response, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to request %q: %w", req.URL, err)
@@ -300,12 +300,15 @@ func (c *clientHelper) call(req *http.Request, result interface{}) (finalErr err
 		}
 	}()
 
-	expectedStatus := http.StatusOK
-	if result == nil {
-		expectedStatus = http.StatusNoContent
+	if len(expectedStatuses) == 0 {
+		if result == nil {
+			expectedStatuses = []int{http.StatusNoContent}
+		} else {
+			expectedStatuses = []int{http.StatusOK}
+		}
 	}
 
-	if err := c.checkResponse(response, expectedStatus); err != nil {
+	if err := c.checkResponse(response, expectedStatuses...); err != nil {
 		return fmt.Errorf("%s to %q: %w", req.Method, req.URL, err)
 	}
 
@@ -320,34 +323,36 @@ func (c *clientHelper) call(req *http.Request, result interface{}) (finalErr err
 	return nil
 }
 
-func (c *clientHelper) checkResponse(response *http.Response, expectedStatus int) error {
-	if response.StatusCode != expectedStatus {
-		errs := new(RequestErrors)
-
-		content, err := io.ReadAll(response.Body)
-		if err != nil {
-			return fmt.Errorf("HTTP %s: failed to read response body: %w", response.Status, err)
+func (c *clientHelper) checkResponse(response *http.Response, expectedStatuses ...int) error {
+	for _, expectedStatus := range expectedStatuses {
+		if response.StatusCode == expectedStatus {
+			return nil
 		}
-
-		if err := json.Unmarshal(content, errs); err != nil {
-			context := map[string]interface{}{
-				"content":      content,
-				"decode_error": err,
-			}
-
-			if contentType := response.Header.Get("Content-Type"); contentType != "" {
-				context["content-type"] = contentType
-			}
-
-			return &RequestErrors{{
-				ErrorCode: response.Status,
-				ErrorDesc: "failed to decode error response",
-				Context:   context,
-			}}
-		}
-
-		return fmt.Errorf("HTTP %s: %w", response.Status, errs)
 	}
 
-	return nil
+	errs := new(RequestErrors)
+
+	content, err := io.ReadAll(response.Body)
+	if err != nil {
+		return fmt.Errorf("HTTP %s: failed to read response body: %w", response.Status, err)
+	}
+
+	if err := json.Unmarshal(content, errs); err != nil {
+		context := map[string]interface{}{
+			"content":      content,
+			"decode_error": err,
+		}
+
+		if contentType := response.Header.Get("Content-Type"); contentType != "" {
+			context["content-type"] = contentType
+		}
+
+		return &RequestErrors{{
+			ErrorCode: response.Status,
+			ErrorDesc: "failed to decode error response",
+			Context:   context,
+		}}
+	}
+
+	return fmt.Errorf("HTTP %s: %w", response.Status, errs)
 }

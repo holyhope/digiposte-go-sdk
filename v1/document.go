@@ -14,7 +14,10 @@ import (
 	"time"
 )
 
-type DocumentID digiposteID
+type (
+	DocumentID  digiposteID
+	DocumentTag string
+)
 
 // GetTrashedDocuments returns all documents in the trash.
 func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResult, error) {
@@ -35,9 +38,9 @@ func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResul
 	queryParams.Set("sort", "TITLE")
 	req.URL.RawQuery = queryParams.Encode()
 
-	var result SearchDocumentsResult
+	result := new(SearchDocumentsResult)
 
-	return &result, c.call(req, &result)
+	return result, c.call(req, result)
 }
 
 // Document represents a document.
@@ -62,9 +65,9 @@ func (c *Client) ListDocuments(ctx context.Context) (*SearchDocumentsResult, err
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	var result SearchDocumentsResult
+	result := new(SearchDocumentsResult)
 
-	return &result, c.call(req, &result)
+	return result, c.call(req, result)
 }
 
 type RedirectionError struct {
@@ -235,6 +238,13 @@ func OnlyDocumentLocatedAt(locations ...Location) DocumentSearchOption {
 	}
 }
 
+// DocumentTaggedWith returns only documents tagged with the given tags.
+func DocumentTaggedWith(tags ...DocumentTag) DocumentSearchOption {
+	return func(body map[string]interface{}) {
+		body["user_tags"] = tags
+	}
+}
+
 // SearchDocuments searches for documents in the given locations.
 func (c *Client) SearchDocuments(ctx context.Context, internalID FolderID, options ...DocumentSearchOption) (
 	*SearchDocumentsResult,
@@ -264,9 +274,9 @@ func (c *Client) SearchDocuments(ctx context.Context, internalID FolderID, optio
 	queryParams.Set("sort", "TITLE")
 	req.URL.RawQuery = queryParams.Encode()
 
-	var result SearchDocumentsResult
+	result := new(SearchDocumentsResult)
 
-	return &result, c.call(req, &result)
+	return result, c.call(req, result)
 }
 
 // RenameDocument renames a document.
@@ -278,9 +288,9 @@ func (c *Client) RenameDocument(ctx context.Context, internalID DocumentID, name
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	var document Document
+	document := new(Document)
 
-	return &document, c.call(req, &document)
+	return document, c.call(req, document)
 }
 
 // CopyDocuments copies the given documents in the same folder.
@@ -297,13 +307,13 @@ func (c *Client) CopyDocuments(ctx context.Context, documentIDs []DocumentID) (*
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 
-	var result SearchDocumentsResult
+	result := new(SearchDocumentsResult)
 
-	return &result, c.call(req, &result)
+	return result, c.call(req, result)
 }
 
 // MultiTag adds the given tags to the given documents.
-func (c *Client) MultiTag(ctx context.Context, tags map[DocumentID][]string) error {
+func (c *Client) MultiTag(ctx context.Context, tags map[DocumentID][]DocumentTag) error {
 	body, err := json.Marshal(map[string]interface{}{
 		"tags": tags,
 	})
@@ -311,20 +321,23 @@ func (c *Client) MultiTag(ctx context.Context, tags map[DocumentID][]string) err
 		return fmt.Errorf("marshal body: %w", err)
 	}
 
-	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/documents/multi-tag", bytes.NewReader(body))
+	req, err := c.apiRequest(ctx, http.MethodPost, "/v3/documents/multiTag", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("new request: %w", err)
 	}
 
-	return c.call(req, nil)
+	return c.call(req, nil, http.StatusOK)
 }
 
 //go:generate stringer -type=DocumentType -trimprefix=DocumentType
 
+// DocumentType represents the type of a document.
 type DocumentType int8
 
 const (
+	// DocumentTypeBasic represents a basic document.
 	DocumentTypeBasic DocumentType = iota
+	// DocumentTypeHealth represents a health document.
 	DocumentTypeHealth
 )
 
@@ -399,6 +412,21 @@ func uploadForm(
 	}
 
 	return formWriter, nil
+}
+
+type UserTags struct {
+	Tags map[DocumentTag]int `json:"tags"`
+}
+
+func (c *Client) UserTags(ctx context.Context) (*UserTags, error) {
+	req, err := c.apiRequest(ctx, http.MethodGet, "/v3/documents/userTags", nil)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+
+	tags := new(UserTags)
+
+	return tags, c.call(req, tags)
 }
 
 // CloseWriterError represents an error during the closing of a writer.
