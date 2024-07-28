@@ -7,6 +7,8 @@ This repository contains the Go SDK for the [Digiposte](https://digiposte.fr) AP
 
 It is a work in progress, and all the API endpoints are not implemented yet.
 
+Last run succeeded on `2024-07-28`.
+
 ## Authentication
 
 The sdk delegates the authentication to the http client. So it must be configured to add the authentication headers to the requests.
