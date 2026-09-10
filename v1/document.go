@@ -21,7 +21,7 @@ type (
 
 // GetTrashedDocuments returns all documents in the trash.
 func (c *Client) GetTrashedDocuments(ctx context.Context) (*SearchDocumentsResult, error) {
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"user_removal": true,
 	})
 	if err != nil {
@@ -79,9 +79,9 @@ func (e *RedirectionError) Error() string {
 }
 
 // DocumentContent returns the content of a document.
-func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) ( //nolint:nonamedreturns
-	contentBuffer io.ReadCloser,
-	contentType string,
+func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) (
+	contentBuffer io.ReadCloser, //nolint:nonamedreturns
+	contentType string, //nolint:nonamedreturns
 	finalErr error,
 ) {
 	endpoint := c.documentURL + "/rest/content/document/" + url.PathEscape(string(internalID))
@@ -97,7 +97,8 @@ func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) ( /
 	}
 
 	defer func() {
-		if err := response.Body.Close(); err != nil {
+		err := response.Body.Close()
+		if err != nil {
 			finalErr = &CloseBodyError{Err: err, OriginalError: finalErr}
 		}
 	}()
@@ -114,14 +115,15 @@ func (c *Client) DocumentContent(ctx context.Context, internalID DocumentID) ( /
 			return nil, "", &RequestErrors{{
 				ErrorCode: http.StatusText(http.StatusUnauthorized),
 				ErrorDesc: "Redirected to the login page.",
-				Context:   map[string]interface{}{"response": response},
+				Context:   map[string]any{"response": response},
 			}}
 		}
 
 		return nil, "", &RedirectionError{Location: location.String()}
 	}
 
-	if err := c.checkResponse(response, http.StatusOK); err != nil {
+	err = c.checkResponse(response, http.StatusOK)
+	if err != nil {
 		return nil, contentType, fmt.Errorf("request to %q: %w", req.URL, err)
 	}
 
@@ -154,74 +156,74 @@ const (
 )
 
 // DocumentSearchOption represents an option for searching documents.
-type DocumentSearchOption func(map[string]interface{})
+type DocumentSearchOption func(map[string]any)
 
 // HealthDocuments returns only health documents.
 func HealthDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["health"] = true
 	}
 }
 
 // NotHealthDocuments returns only non-health documents.
 func NotHealthDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["health"] = false
 	}
 }
 
 // SharedDocuments returns only shared documents.
 func SharedDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["document_shared"] = true
 	}
 }
 
 // NotSharedDocuments returns only non-shared documents.
 func NotSharedDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["document_shared"] = false
 	}
 }
 
 // ReadDocuments returns only read documents.
 func ReadDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["document_read"] = true
 	}
 }
 
 // UnreadDocuments returns only unread documents.
 func UnreadDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["document_read"] = false
 	}
 }
 
 // CertifiedDocuments returns only certified documents.
 func CertifiedDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["document_certified"] = true
 	}
 }
 
 // NotCertifiedDocuments returns only non-certified documents.
 func NotCertifiedDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["document_certified"] = false
 	}
 }
 
 // FavoriteDocuments returns only favorite documents.
 func FavoriteDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["favorite"] = true
 	}
 }
 
 // NotFavoriteDocuments returns only non-favorite documents.
 func NotFavoriteDocuments() DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["favorite"] = false
 	}
 }
@@ -233,14 +235,14 @@ func OnlyDocumentLocatedAt(locations ...Location) DocumentSearchOption {
 		locationsStr[i] = l.String()
 	}
 
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["locations"] = locationsStr
 	}
 }
 
 // DocumentTaggedWith returns only documents tagged with the given tags.
 func DocumentTaggedWith(tags ...DocumentTag) DocumentSearchOption {
-	return func(body map[string]interface{}) {
+	return func(body map[string]any) {
 		body["user_tags"] = tags
 	}
 }
@@ -250,7 +252,7 @@ func (c *Client) SearchDocuments(ctx context.Context, internalID FolderID, optio
 	*SearchDocumentsResult,
 	error,
 ) {
-	body := map[string]interface{}{
+	body := map[string]any{
 		"folder_id": internalID,
 		"locations": []string{LocationInbox.String(), LocationSafe.String()},
 	}
@@ -295,7 +297,7 @@ func (c *Client) RenameDocument(ctx context.Context, internalID DocumentID, name
 
 // CopyDocuments copies the given documents in the same folder.
 func (c *Client) CopyDocuments(ctx context.Context, documentIDs []DocumentID) (*SearchDocumentsResult, error) {
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"documents": documentIDs,
 	})
 	if err != nil {
@@ -314,7 +316,7 @@ func (c *Client) CopyDocuments(ctx context.Context, documentIDs []DocumentID) (*
 
 // MultiTag adds the given tags to the given documents.
 func (c *Client) MultiTag(ctx context.Context, tags map[DocumentID][]DocumentTag) error {
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"tags": tags,
 	})
 	if err != nil {
@@ -342,13 +344,13 @@ const (
 )
 
 // CreateDocument creates a document.
-func (c *Client) CreateDocument( //nolint:nonamedreturns
+func (c *Client) CreateDocument(
 	ctx context.Context,
 	folderID FolderID,
 	name string,
 	data io.Reader,
 	docType DocumentType,
-) (document *Document, finalErr error) {
+) (document *Document, finalErr error) { //nolint:nonamedreturns
 	var buf bytes.Buffer
 
 	formWriter, err := uploadForm(&buf, docType, folderID, name, data)
@@ -362,7 +364,7 @@ func (c *Client) CreateDocument( //nolint:nonamedreturns
 	}
 
 	req.Header.Set("Content-Type", formWriter.FormDataContentType())
-	req.Header.Set("X-API-VERSION-MINOR", "2")
+	req.Header.Set("X-Api-Version-Minor", "2")
 	req.Header.Set("Origin", "https://github.com/holyhope/digiposte-go-sdk")
 
 	document = new(Document)
@@ -379,17 +381,20 @@ func uploadForm(
 ) (*multipart.Writer, error) {
 	formWriter := multipart.NewWriter(writer)
 
-	if err := formWriter.WriteField("health_document", strconv.FormatBool(docType == DocumentTypeHealth)); err != nil {
+	err := formWriter.WriteField("health_document", strconv.FormatBool(docType == DocumentTypeHealth))
+	if err != nil {
 		return formWriter, fmt.Errorf("write health_document: %w", err)
 	}
 
 	if folderID != "" {
-		if err := formWriter.WriteField("folder_id", string(folderID)); err != nil {
+		err := formWriter.WriteField("folder_id", string(folderID))
+		if err != nil {
 			return formWriter, fmt.Errorf("write folder_id: %w", err)
 		}
 	}
 
-	if err := formWriter.WriteField("title", name); err != nil {
+	err = formWriter.WriteField("title", name)
+	if err != nil {
 		return formWriter, fmt.Errorf("write title: %w", err)
 	}
 
@@ -403,11 +408,13 @@ func uploadForm(
 		return formWriter, fmt.Errorf("copy archive file: %w", err)
 	}
 
-	if err := formWriter.WriteField("archive_size", strconv.FormatInt(size, 10)); err != nil {
+	err = formWriter.WriteField("archive_size", strconv.FormatInt(size, 10))
+	if err != nil {
 		return formWriter, fmt.Errorf("write archive_size: %w", err)
 	}
 
-	if err := formWriter.Close(); err != nil {
+	err = formWriter.Close()
+	if err != nil {
 		return formWriter, fmt.Errorf("close form writer: %w", err)
 	}
 

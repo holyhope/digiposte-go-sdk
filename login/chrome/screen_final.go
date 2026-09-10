@@ -27,9 +27,10 @@ func (s *finalScreen) String() string {
 func (s *finalScreen) CurrentPageMatches(ctx context.Context) bool {
 	var currentLocation string
 
-	if err := chromedp.Run(ctx,
+	err := chromedp.Run(ctx,
 		chromedp.Location(&currentLocation),
-	); err != nil {
+	)
+	if err != nil {
 		errorLogger(ctx).Printf("run: %v\n", err)
 
 		return false
@@ -60,11 +61,12 @@ func (s *finalScreen) Do(ctx context.Context) error {
 
 	infoLogger(ctx).Println("Fetching token from browser...")
 
-	if err := (&chromedp.Tasks{
+	err := (&chromedp.Tasks{
 		chromedp.Poll(`sessionStorage.getItem("access_token")`, &token.AccessToken),
 		// access_expires_at returns the current time, is this a bug?
 		chromedp.Poll(`sessionStorage.getItem("app_expires_at")`, &expiryStr),
-	}).Do(ctx); err != nil {
+	}).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("fetch token from browser: %w", err)
 	}
 
@@ -86,7 +88,7 @@ func (s *finalScreen) Do(ctx context.Context) error {
 
 	infoLogger(ctx).Println("Fetching cookies from browser...")
 
-	if err := (&chromedp.Tasks{
+	err = (&chromedp.Tasks{
 		chromedp.Location(&currentURL),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			chromeCookies, err := network.GetCookies().Do(ctx)
@@ -101,7 +103,8 @@ func (s *finalScreen) Do(ctx context.Context) error {
 
 			return nil
 		}),
-	}).Do(ctx); err != nil {
+	}).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("fetch cookies from browser: %w", err)
 	}
 
@@ -131,6 +134,8 @@ func convertCookie(cookie *network.Cookie) *http.Cookie {
 		sameSite = http.SameSiteDefaultMode
 	}
 
+	// Attributes below are copied verbatim from the browser's own cookie, not invented here.
+	//nolint:gosec
 	return &http.Cookie{
 		Name:     cookie.Name,
 		Value:    cookie.Value,
@@ -142,8 +147,10 @@ func convertCookie(cookie *network.Cookie) *http.Cookie {
 		SameSite: sameSite,
 		Raw:      fmt.Sprintf("%s=%s", cookie.Name, cookie.Value),
 
-		RawExpires: "",
-		MaxAge:     0,
-		Unparsed:   nil,
+		RawExpires:  "",
+		MaxAge:      0,
+		Unparsed:    nil,
+		Quoted:      false,
+		Partitioned: false,
 	}
 }

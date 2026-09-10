@@ -41,7 +41,7 @@ func (s *credentialsScreen) CurrentPageMatches(ctx context.Context) bool {
 }
 
 func (s *credentialsScreen) Do(ctx context.Context) error {
-	if err := (&chromedp.Tasks{
+	err := (&chromedp.Tasks{
 		chromedp.WaitVisible(`#submit`, chromedp.ByID),
 		chromedp.WaitEnabled(`#submit`, chromedp.ByID),
 
@@ -56,7 +56,8 @@ func (s *credentialsScreen) Do(ctx context.Context) error {
 		chromedp.SendKeys(`#password`, s.Password, chromedp.ByID),
 
 		chromedp.Click(`#submit`, chromedp.ByID),
-	}).Do(ctx); err != nil {
+	}).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("tasks: %w", err)
 	}
 
@@ -67,7 +68,7 @@ func (s *credentialsScreen) ShouldWaitForResponse() bool {
 	return true
 }
 
-func (s *credentialsScreen) ClearInput(sel interface{}, opts ...chromedp.QueryOption) *chromedp.Tasks {
+func (s *credentialsScreen) ClearInput(sel any, opts ...chromedp.QueryOption) *chromedp.Tasks {
 	return &chromedp.Tasks{
 		chromedp.Clear(sel, opts...),
 

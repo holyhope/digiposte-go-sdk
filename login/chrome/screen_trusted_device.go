@@ -32,10 +32,11 @@ func (s *trustedDeviceScreen) CurrentPageMatches(ctx context.Context) bool {
 }
 
 func (s *trustedDeviceScreen) Do(ctx context.Context) error {
-	if err := (&chromedp.Tasks{
+	err := (&chromedp.Tasks{
 		chromedp.WaitVisible(`#linkLater`, chromedp.BySearch),
 		chromedp.Click(`#linkLater`, chromedp.ByID),
-	}).Do(ctx); err != nil {
+	}).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("tasks: %w", err)
 	}
 

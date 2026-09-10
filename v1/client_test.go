@@ -28,10 +28,11 @@ var _ = ginkgo.Describe("Client", func() {
 				Credentials: nil,
 				LoginMethod: &noop.LoginMethod{
 					Token: &oauth2.Token{
-						AccessToken:  "token",
+						AccessToken:  testAccessToken,
 						TokenType:    "Bearer",
 						RefreshToken: "refresh",
 						Expiry:       time.Now().Add(time.Minute),
+						ExpiresIn:    0,
 					},
 					Cookies: nil,
 				},

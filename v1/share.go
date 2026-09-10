@@ -30,9 +30,9 @@ type Share struct {
 
 const timeFormat = `2006-01-02T15:04:05Z`
 
-// Share creates a share for a specific time period, with a title and a security code.
+// CreateShare creates a share for a specific time period, with a title and a security code.
 func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, title, code string) (*Share, error) {
-	body := map[string]interface{}{
+	body := map[string]any{
 		"start_date": startDate.UTC().Format(timeFormat),
 		"title":      title,
 	}
@@ -62,7 +62,7 @@ func (c *Client) CreateShare(ctx context.Context, startDate, endDate time.Time, 
 
 // SetShareDocuments adds a document to a share.
 func (c *Client) SetShareDocuments(ctx context.Context, shareID ShareID, documentIDs []DocumentID) error {
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"ids": documentIDs,
 	})
 	if err != nil {

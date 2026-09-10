@@ -26,7 +26,8 @@ func (s *firstScreen) Do(ctx context.Context) error {
 		return &MissingOptionError{Option: "WithURL"}
 	}
 
-	if err := chromedp.Navigate(s.URL).Do(ctx); err != nil {
+	err := chromedp.Navigate(s.URL).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("navigate: %w", err)
 	}
 

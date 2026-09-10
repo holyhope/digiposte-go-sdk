@@ -17,7 +17,8 @@ func GetChrome(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("browser download: %w", err)
 	}
 
-	if err := browser.Validate(); err != nil {
+	err = browser.Validate()
+	if err != nil {
 		return "", fmt.Errorf("browser download validation: %w", err)
 	}
 

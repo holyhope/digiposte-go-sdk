@@ -51,6 +51,35 @@ func (s *Screens) Resolve(ctx context.Context) {
 	waitGroup.Wait()
 }
 
+func resolve(ctx context.Context, screen Screen) error {
+	if screen.ShouldWaitForResponse() {
+		resp, err := chromedp.RunResponse(ctx, screen)
+		if err != nil {
+			return fmt.Errorf("run response: %w", err)
+		}
+
+		if resp != nil && resp.Status >= 400 {
+			return fmt.Errorf("response: %w", &HTTPError{
+				Status:     resp.Status,
+				StatusText: resp.StatusText,
+			})
+		}
+
+		return nil
+	}
+
+	err := chromedp.Run(ctx, screen)
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Screens) Succeeded() bool {
+	return s.succeeded.Load()
+}
+
 func (s *Screens) run(ctx context.Context, screen Screen) {
 	refreshFrequency := time.NewTicker(s.refreshFrequency)
 	defer refreshFrequency.Stop()
@@ -91,32 +120,4 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 			infoLogger(ctx).Println("Screen passed")
 		}
 	}
-}
-
-func resolve(ctx context.Context, screen Screen) error {
-	if screen.ShouldWaitForResponse() {
-		resp, err := chromedp.RunResponse(ctx, screen)
-		if err != nil {
-			return fmt.Errorf("run response: %w", err)
-		}
-
-		if resp != nil && resp.Status >= 400 {
-			return fmt.Errorf("response: %w", &HTTPError{
-				Status:     resp.Status,
-				StatusText: resp.StatusText,
-			})
-		}
-
-		return nil
-	}
-
-	if err := chromedp.Run(ctx, screen); err != nil {
-		return fmt.Errorf("run: %w", err)
-	}
-
-	return nil
-}
-
-func (s *Screens) Succeeded() bool {
-	return s.succeeded.Load()
 }

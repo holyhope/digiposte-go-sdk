@@ -72,7 +72,7 @@ func (c *Client) RenameFolder(ctx context.Context, internalID FolderID, name str
 
 // CreateFolder creates a folder.
 func (c *Client) CreateFolder(ctx context.Context, parentID FolderID, name string) (*Folder, error) {
-	body, err := json.Marshal(map[string]interface{}{
+	body, err := json.Marshal(map[string]any{
 		"parent_id": parentID,
 		"name":      name,
 	})

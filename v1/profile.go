@@ -8,20 +8,20 @@ import (
 )
 
 type Serializable struct {
-	Serializer   interface{} `json:"serializer"`
-	Deserializer interface{} `json:"deserializer"`
+	Serializer   any `json:"serializer"`
+	Deserializer any `json:"deserializer"`
 }
 
 type UserInfo struct {
-	InternalID string      `json:"id"`
-	Title      string      `json:"title"`
-	FirstName  string      `json:"first_name"`
-	LastName   string      `json:"last_name"`
-	IDXiti     interface{} `json:"id_xiti"`
-	Login      string      `json:"login"`
-	Type       string      `json:"user_type"`
-	Locale     string      `json:"locale"`
-	Email      string      `json:"primaryEmail"`
+	InternalID string `json:"id"`
+	Title      string `json:"title"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	IDXiti     any    `json:"id_xiti"`
+	Login      string `json:"login"`
+	Type       string `json:"user_type"`
+	Locale     string `json:"locale"`
+	Email      string `json:"primaryEmail"`
 }
 
 type Offer struct {
@@ -85,19 +85,19 @@ type Profile struct {
 	Storage      `json:",inline"`
 	Serializable `json:",inline"`
 
-	Status                  string        `json:"status"`
-	AuthorName              string        `json:"author_name"`
-	LastConnexionDate       string        `json:"last_connexion_date"`
-	VerifyProfile           string        `json:"verify_profile"`
-	Completion              int           `json:"completion"`
-	VerifiedDocuments       []interface{} `json:"verified_documents"`
-	PartialAccount          bool          `json:"partial_account"`
-	IDNumeriqueValid        bool          `json:"idn_valid"`
-	BasicUser               bool          `json:"basic_user"`
-	SecretQuestionAvailable bool          `json:"secret_question_available"`
-	FirstConnection         bool          `json:"first_connection"`
-	Salaried                bool          `json:"salaried"`
-	IndexationConsent       bool          `json:"indexation_consent"`
+	Status                  string `json:"status"`
+	AuthorName              string `json:"author_name"`
+	LastConnexionDate       string `json:"last_connexion_date"`
+	VerifyProfile           string `json:"verify_profile"`
+	Completion              int    `json:"completion"`
+	VerifiedDocuments       []any  `json:"verified_documents"`
+	PartialAccount          bool   `json:"partial_account"`
+	IDNumeriqueValid        bool   `json:"idn_valid"`
+	BasicUser               bool   `json:"basic_user"`
+	SecretQuestionAvailable bool   `json:"secret_question_available"`
+	FirstConnection         bool   `json:"first_connection"`
+	Salaried                bool   `json:"salaried"`
+	IndexationConsent       bool   `json:"indexation_consent"`
 }
 
 //go:generate stringer -type=ProfileMode -linecomment

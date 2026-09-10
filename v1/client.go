@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"slices"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -87,7 +88,8 @@ func NewAuthenticatedClient(ctx context.Context, httpClient *http.Client, config
 		config = new(Config)
 	}
 
-	if err := config.SetupDefault(ctx); err != nil {
+	err := config.SetupDefault(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("setup default config: %w", err)
 	}
 
@@ -137,7 +139,7 @@ func NewAuthenticatedClient(ctx context.Context, httpClient *http.Client, config
 	return NewCustomClient(config.APIURL, config.DocumentURL, authenticatedClient), nil
 }
 
-// NewClient creates a new Digiposte client.
+// NewCustomClient creates a new Digiposte client.
 func NewCustomClient(apiURL, documentURL string, client *http.Client) *Client {
 	if client == nil {
 		client = new(http.Client)
@@ -167,19 +169,12 @@ func NewCustomClient(apiURL, documentURL string, client *http.Client) *Client {
 
 const JSONContentType = "application/json"
 
-func (c *Client) apiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, c.apiURL+path, body)
-	if err != nil {
-		return nil, fmt.Errorf("new request: %w", err)
-	}
-
-	req.Header.Set("Accept", JSONContentType)
-	req.Header.Set("Content-Type", JSONContentType)
-
-	return req, nil
-}
-
 const TrashDirName = "trash"
+
+const (
+	documentIDsField = "document_ids"
+	folderIDsField   = "folder_ids"
+)
 
 // ID represents an internal digiposte ID.
 type digiposteID string
@@ -202,11 +197,11 @@ func (e *CloseBodyError) Unwrap() error {
 	return e.Err
 }
 
-// RequestError is an error returned when the API returns an error.
+// RequestErrors is an error returned when the API returns an error.
 type RequestErrors []struct {
-	ErrorCode string                 `json:"error"`
-	ErrorDesc string                 `json:"error_description,omitempty"`
-	Context   map[string]interface{} `json:"context,omitempty"`
+	ErrorCode string         `json:"error"`
+	ErrorDesc string         `json:"error_description,omitempty"`
+	Context   map[string]any `json:"context,omitempty"`
 }
 
 func (e *RequestErrors) Error() string {
@@ -221,9 +216,9 @@ func (e *RequestErrors) Error() string {
 
 // Trash move trashes the given documents and folders to the trash.
 func (c *Client) Trash(ctx context.Context, documentIDs []DocumentID, folderIDs []FolderID) error {
-	body, err := json.Marshal(map[string]interface{}{
-		"document_ids": documentIDs,
-		"folder_ids":   folderIDs,
+	body, err := json.Marshal(map[string]any{
+		documentIDsField: documentIDs,
+		folderIDsField:   folderIDs,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal body: %w", err)
@@ -243,9 +238,9 @@ func (c *Client) Trash(ctx context.Context, documentIDs []DocumentID, folderIDs 
 
 // Delete deletes permanently the given documents and folders.
 func (c *Client) Delete(ctx context.Context, documentIDs []DocumentID, folderIDs []FolderID) error {
-	body, err := json.Marshal(map[string]interface{}{
-		"document_ids": documentIDs,
-		"folder_ids":   folderIDs,
+	body, err := json.Marshal(map[string]any{
+		documentIDsField: documentIDs,
+		folderIDsField:   folderIDs,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal body: %w", err)
@@ -261,9 +256,9 @@ func (c *Client) Delete(ctx context.Context, documentIDs []DocumentID, folderIDs
 
 // Move moves the given documents and folders to the given destination.
 func (c *Client) Move(ctx context.Context, destID FolderID, documentIDs []DocumentID, folderIDs []FolderID) error {
-	body, err := json.Marshal(map[string]interface{}{
-		"document_ids": documentIDs,
-		"folder_ids":   folderIDs,
+	body, err := json.Marshal(map[string]any{
+		documentIDsField: documentIDs,
+		folderIDsField:   folderIDs,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal body: %w", err)
@@ -289,18 +284,33 @@ func (c *Client) Logout(ctx context.Context) error {
 	return c.call(req, nil)
 }
 
+func (c *Client) apiRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, c.apiURL+path, body)
+	if err != nil {
+		return nil, fmt.Errorf("new request: %w", err)
+	}
+
+	req.Header.Set("Accept", JSONContentType)
+	req.Header.Set("Content-Type", JSONContentType)
+
+	return req, nil
+}
+
 type clientHelper struct {
 	client *http.Client
 }
 
-func (c *clientHelper) call(req *http.Request, result interface{}, expectedStatuses ...int) (finalErr error) {
+func (c *clientHelper) call(req *http.Request, result any, expectedStatuses ...int) (finalErr error) {
+	// req targets the configured Digiposte API/document base URL, not arbitrary user input.
+	//nolint:gosec
 	response, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to request %q: %w", req.URL, err)
 	}
 
 	defer func() {
-		if err := response.Body.Close(); err != nil {
+		err := response.Body.Close()
+		if err != nil {
 			finalErr = &CloseBodyError{Err: err, OriginalError: finalErr}
 		}
 	}()
@@ -313,7 +323,8 @@ func (c *clientHelper) call(req *http.Request, result interface{}, expectedStatu
 		}
 	}
 
-	if err := c.checkResponse(response, expectedStatuses...); err != nil {
+	err = c.checkResponse(response, expectedStatuses...)
+	if err != nil {
 		return fmt.Errorf("%s to %q: %w", req.Method, req.URL, err)
 	}
 
@@ -321,7 +332,8 @@ func (c *clientHelper) call(req *http.Request, result interface{}, expectedStatu
 		return nil
 	}
 
-	if err := json.NewDecoder(response.Body).Decode(result); err != nil {
+	err = json.NewDecoder(response.Body).Decode(result)
+	if err != nil {
 		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -329,10 +341,8 @@ func (c *clientHelper) call(req *http.Request, result interface{}, expectedStatu
 }
 
 func (c *clientHelper) checkResponse(response *http.Response, expectedStatuses ...int) error {
-	for _, expectedStatus := range expectedStatuses {
-		if response.StatusCode == expectedStatus {
-			return nil
-		}
+	if slices.Contains(expectedStatuses, response.StatusCode) {
+		return nil
 	}
 
 	errs := new(RequestErrors)
@@ -342,8 +352,9 @@ func (c *clientHelper) checkResponse(response *http.Response, expectedStatuses .
 		return fmt.Errorf("HTTP %s: failed to read response body: %w", response.Status, err)
 	}
 
-	if err := json.Unmarshal(content, errs); err != nil {
-		context := map[string]interface{}{
+	err = json.Unmarshal(content, errs)
+	if err != nil {
+		context := map[string]any{
 			"content":      content,
 			"decode_error": err,
 		}

@@ -20,7 +20,8 @@ import (
 func New(opts ...login.Option) (login.Method, error) { //nolint:ireturn
 	for i, opt := range opts {
 		if opt, ok := opt.(Validatable); ok {
-			if err := opt.Validate(); err != nil {
+			err := opt.Validate()
+			if err != nil {
 				return nil, fmt.Errorf("validate option %d: %w", i, err)
 			}
 		}
@@ -46,7 +47,8 @@ func (c *chromeMethod) Login(ctx context.Context, creds *login.Credentials) (*oa
 
 	defer cancel()
 
-	if err := chromedp.Run(independentChromeCtx); err != nil {
+	err = chromedp.Run(independentChromeCtx)
+	if err != nil {
 		return nil, nil, fmt.Errorf("init chrome: %w", err)
 	}
 
@@ -83,7 +85,8 @@ func (c *chromeMethod) newChromeLogin(
 	}
 
 	for i, opt := range c.opts {
-		if err := opt.Apply(chrome); err != nil {
+		err := opt.Apply(chrome)
+		if err != nil {
 			return nil, nil, nil, fmt.Errorf("apply option %d: %w", i, err)
 		}
 	}
@@ -101,7 +104,7 @@ func (c *chromeMethod) newChromeLogin(
 			c.ContextOptions = append(c.ContextOptions,
 				chromedp.WithErrorf(chrome.errorLogger.Printf),
 				chromedp.WithLogf(chrome.infoLogger.Printf),
-				chromedp.WithDebugf(func(_ string, _ ...interface{}) {
+				chromedp.WithDebugf(func(_ string, _ ...any) {
 					// do nothing
 				}),
 			)
@@ -127,12 +130,14 @@ func closeChrome(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, cancellationTimeout)
 	defer cancel()
 
-	if err := chromedp.Cancel(ctx); err != nil {
+	err := chromedp.Cancel(ctx)
+	if err != nil {
 		lgr := errorLogger(ctx)
 
 		lgr.Printf("Failed to cancel chrome: %v\n", err)
 
-		if err := proc.Kill(); err != nil {
+		err := proc.Kill()
+		if err != nil {
 			lgr.Printf("Failed to kill chrome: %v\n", err)
 		}
 	}
