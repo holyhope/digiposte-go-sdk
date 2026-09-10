@@ -102,8 +102,9 @@ func (c *chromeLogin) resolveLogin(
 				AcceptCookies: false,
 			},
 			&credentialsScreen{
-				Username: creds.Username,
-				Password: creds.Password,
+				Username:  creds.Username,
+				Password:  creds.Password,
+				submitted: atomic.Bool{},
 			},
 			&otpScreen{
 				Secret: creds.OTPSecret,
