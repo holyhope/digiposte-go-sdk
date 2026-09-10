@@ -14,33 +14,6 @@ import (
 	"github.com/holyhope/digiposte-go-sdk/login"
 )
 
-func (c *chromeLogin) login( //nolint:nonamedreturns
-	parentCtx, independentChromeCtx context.Context,
-	creds *login.Credentials,
-) (_ *oauth2.Token, _ []*http.Cookie, finalErr error) {
-	if c.timeout > 0 {
-		ctx, cancel := context.WithTimeout(parentCtx, c.timeout)
-		defer cancel()
-
-		parentCtx = ctx
-	}
-
-	ctx, cancel := WithCancelOnClose(independentChromeCtx, parentCtx.Done())
-	defer cancel()
-
-	defer c.WrapError(independentChromeCtx, &finalErr)
-
-	if err := resolve(ctx, &firstScreen{
-		URL: c.url,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("first screen: %w", err)
-	}
-
-	infoLogger(ctx).Printf("Page %q loaded\n", c.url)
-
-	return c.resolveLogin(ctx, creds)
-}
-
 type WithLocationError struct {
 	Err      error
 	Location string
@@ -57,9 +30,10 @@ func (c *chromeLogin) WrapError(ctx context.Context, errPtr *error) {
 
 	var currentLocation string
 
-	if err := chromedp.Run(ctx,
+	err := chromedp.Run(ctx,
 		chromedp.Location(&currentLocation),
-	); err != nil {
+	)
+	if err != nil {
 		errorLogger(ctx).Printf("Failed to get current location: %v\n", err)
 	} else {
 		*errPtr = &WithLocationError{
@@ -69,6 +43,34 @@ func (c *chromeLogin) WrapError(ctx context.Context, errPtr *error) {
 	}
 
 	*errPtr = c.ScreenshotIfNeeded(ctx, *errPtr)
+}
+
+func (c *chromeLogin) login(
+	parentCtx, independentChromeCtx context.Context,
+	creds *login.Credentials,
+) (_ *oauth2.Token, _ []*http.Cookie, finalErr error) { //nolint:nonamedreturns
+	if c.timeout > 0 {
+		ctx, cancel := context.WithTimeout(parentCtx, c.timeout)
+		defer cancel()
+
+		parentCtx = ctx
+	}
+
+	ctx, cancel := WithCancelOnClose(independentChromeCtx, parentCtx.Done())
+	defer cancel()
+
+	defer c.WrapError(independentChromeCtx, &finalErr)
+
+	err := resolve(ctx, &firstScreen{
+		URL: c.url,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("first screen: %w", err)
+	}
+
+	infoLogger(ctx).Printf("Page %q loaded\n", c.url)
+
+	return c.resolveLogin(ctx, creds)
 }
 
 func WithCancelOnClose(ctx context.Context, done <-chan struct{}) (context.Context, context.CancelFunc) {
@@ -100,8 +102,9 @@ func (c *chromeLogin) resolveLogin(
 				AcceptCookies: false,
 			},
 			&credentialsScreen{
-				Username: creds.Username,
-				Password: creds.Password,
+				Username:  creds.Username,
+				Password:  creds.Password,
+				submitted: atomic.Bool{},
 			},
 			&otpScreen{
 				Secret: creds.OTPSecret,

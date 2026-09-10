@@ -26,9 +26,10 @@ func (s *otpScreen) String() string {
 func (s *otpScreen) CurrentPageMatches(ctx context.Context) bool {
 	var nodeIDs []cdp.NodeID
 
-	if err := chromedp.Run(ctx,
+	err := chromedp.Run(ctx,
 		chromedp.NodeIDs(`#otpCode`, &nodeIDs, chromedp.ByID, chromedp.AtLeast(0)),
-	); err != nil {
+	)
+	if err != nil {
 		errorLogger(ctx).Printf("run: %v\n", err)
 
 		return false
@@ -54,14 +55,15 @@ func (s *otpScreen) Do(ctx context.Context) error {
 		return fmt.Errorf("generate code: %w", err)
 	}
 
-	if err := (&chromedp.Tasks{
+	err = (&chromedp.Tasks{
 		// OTP not enabled, skip the screen
 		chromedp.QueryAfter(`#linkLater`, func(ctx context.Context, _ runtime.ExecutionContextID, n ...*cdp.Node) error {
 			if len(n) == 0 {
 				return nil
 			}
 
-			if err := chromedp.MouseClickNode(n[0]).Do(ctx); err != nil {
+			err := chromedp.MouseClickNode(n[0]).Do(ctx)
+			if err != nil {
 				return fmt.Errorf("click: %w", err)
 			}
 
@@ -76,7 +78,8 @@ func (s *otpScreen) Do(ctx context.Context) error {
 		chromedp.WaitVisible(`#submit`, chromedp.ByID),
 		chromedp.WaitEnabled(`#submit`, chromedp.ByID),
 		chromedp.Click(`#submit`, chromedp.ByID),
-	}).Do(ctx); err != nil {
+	}).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("tasks: %w", err)
 	}
 

@@ -36,7 +36,7 @@ type withRefreshFrequency struct {
 	Frequency time.Duration
 }
 
-func (o *withRefreshFrequency) Apply(instance interface{}) error {
+func (o *withRefreshFrequency) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		chrome.refreshFrequency = o.Frequency
 
@@ -68,7 +68,7 @@ type withTimeout struct {
 	Timeout time.Duration
 }
 
-func (o *withTimeout) Apply(instance interface{}) error {
+func (o *withTimeout) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		chrome.timeout = o.Timeout
 
@@ -111,7 +111,7 @@ func (o *withURL) Validate() error {
 	return nil
 }
 
-func (o *withURL) Apply(instance interface{}) error {
+func (o *withURL) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		chrome.url = o.URL
 
@@ -130,7 +130,7 @@ type withCookies struct {
 	Cookies []*http.Cookie
 }
 
-func (o *withCookies) Apply(instance interface{}) error {
+func (o *withCookies) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		chrome.cookies = o.Cookies
 
@@ -147,7 +147,7 @@ func WithScreenShortOnError() login.Option { //nolint:ireturn
 
 type withScreenShortOnError struct{}
 
-func (o *withScreenShortOnError) Apply(instance interface{}) error {
+func (o *withScreenShortOnError) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		chrome.screenShortOnError = true
 
@@ -158,7 +158,7 @@ func (o *withScreenShortOnError) Apply(instance interface{}) error {
 }
 
 type InvalidTypeOptionError struct {
-	instance interface{}
+	instance any
 }
 
 func (e *InvalidTypeOptionError) Error() string {
@@ -212,7 +212,7 @@ type withLoggers struct {
 	Error *log.Logger
 }
 
-func (o *withLoggers) Apply(instance interface{}) error {
+func (o *withLoggers) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		if o.Info != nil {
 			chrome.infoLogger = o.Info
@@ -250,7 +250,7 @@ type withChromeVersion struct {
 	Browser *launcher.Browser
 }
 
-func (o *withChromeVersion) Apply(instance interface{}) error {
+func (o *withChromeVersion) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		o.Browser.Logger = chrome.infoLogger
 
@@ -259,7 +259,8 @@ func (o *withChromeVersion) Apply(instance interface{}) error {
 			return fmt.Errorf("get browser: %w", err)
 		}
 
-		if err := o.Browser.Validate(); err != nil {
+		err = o.Browser.Validate()
+		if err != nil {
 			return fmt.Errorf("validate browser: %w", err)
 		}
 
@@ -280,7 +281,7 @@ type withBinary struct {
 	Path string
 }
 
-func (o *withBinary) Apply(instance interface{}) error {
+func (o *withBinary) Apply(instance any) error {
 	if chrome, ok := instance.(*chromeLogin); ok {
 		if o.Path != "" {
 			chrome.binaryPath = o.Path

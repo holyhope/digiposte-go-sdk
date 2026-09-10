@@ -15,12 +15,19 @@ import (
 	"github.com/holyhope/digiposte-go-sdk/login/oauth"
 )
 
+const (
+	testTokenType    = "token-type"
+	testRefreshToken = "refresh-token"
+)
+
 var _ = ginkgo.Describe("TokenSource", func() {
 	var tokenSource *oauth.TokenSource
+
 	var expiry time.Time
 
 	ginkgo.BeforeEach(func() {
 		var nbTokens atomic.Int32
+
 		var nbCalls atomic.Int32
 
 		expiry = time.Now().Add(time.Hour)
@@ -36,9 +43,10 @@ var _ = ginkgo.Describe("TokenSource", func() {
 
 					return &oauth2.Token{
 						AccessToken:  fmt.Sprintf("access-token-%d", nbTokens.Add(1)),
-						TokenType:    "token-type",
-						RefreshToken: "refresh-token",
+						TokenType:    testTokenType,
+						RefreshToken: testRefreshToken,
 						Expiry:       expiry,
+						ExpiresIn:    0,
 					}, nil, nil
 				},
 			},
@@ -50,8 +58,9 @@ var _ = ginkgo.Describe("TokenSource", func() {
 			Listener: func(token *oauth2.Token, cookies []*http.Cookie) {
 				gomega.Expect(token).To(gomega.Equal(&oauth2.Token{
 					AccessToken:  fmt.Sprintf("access-token-%d", nbCalls.Add(1)),
-					TokenType:    "token-type",
-					RefreshToken: "refresh-token",
+					TokenType:    testTokenType,
+					RefreshToken: testRefreshToken,
+					ExpiresIn:    0,
 					Expiry:       expiry,
 				}))
 				gomega.Expect(cookies).To(gomega.BeEmpty())
@@ -66,15 +75,17 @@ var _ = ginkgo.Describe("TokenSource", func() {
 	ginkgo.It("Should generate a token", func() {
 		gomega.Expect(tokenSource.Token()).To(gomega.Equal(&oauth2.Token{
 			AccessToken:  "access-token-1",
-			TokenType:    "token-type",
-			RefreshToken: "refresh-token",
+			TokenType:    testTokenType,
+			RefreshToken: testRefreshToken,
 			Expiry:       expiry,
+			ExpiresIn:    0,
 		}))
 		gomega.Expect(tokenSource.Token()).To(gomega.Equal(&oauth2.Token{
 			AccessToken:  "access-token-2",
-			TokenType:    "token-type",
-			RefreshToken: "refresh-token",
+			TokenType:    testTokenType,
+			RefreshToken: testRefreshToken,
 			Expiry:       expiry,
+			ExpiresIn:    0,
 		}))
 	})
 })
@@ -113,6 +124,7 @@ var _ = ginkgo.Describe("CombinedTokenSources", func() {
 
 	ginkgo.Describe("With one valid token source", func() {
 		var expiry time.Time
+
 		ginkgo.BeforeEach(func() {
 			expiry = time.Now().Add(time.Hour)
 			tokenSources = oauth.CombinedTokenSources{
@@ -130,9 +142,10 @@ var _ = ginkgo.Describe("CombinedTokenSources", func() {
 					TokenSource: func() (*oauth2.Token, error) {
 						return &oauth2.Token{
 							AccessToken:  "access-token",
-							TokenType:    "token-type",
-							RefreshToken: "refresh-token",
+							TokenType:    testTokenType,
+							RefreshToken: testRefreshToken,
 							Expiry:       expiry,
+							ExpiresIn:    0,
 						}, nil
 					},
 				},
@@ -147,9 +160,10 @@ var _ = ginkgo.Describe("CombinedTokenSources", func() {
 		ginkgo.It("Should returns the token without errors", func() {
 			gomega.Expect(tokenSources.Token()).To(gomega.Equal(&oauth2.Token{
 				AccessToken:  "access-token",
-				TokenType:    "token-type",
-				RefreshToken: "refresh-token",
+				TokenType:    testTokenType,
+				RefreshToken: testRefreshToken,
 				Expiry:       expiry,
+				ExpiresIn:    0,
 			}))
 		})
 	})

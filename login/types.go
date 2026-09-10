@@ -16,12 +16,12 @@ type Credentials struct {
 }
 
 type Option interface {
-	Apply(instance interface{}) error
+	Apply(instance any) error
 }
 
-type OptionFunc func(instance interface{}) error
+type OptionFunc func(instance any) error
 
-func (f OptionFunc) Apply(instance interface{}) error {
+func (f OptionFunc) Apply(instance any) error {
 	return f(instance)
 }
 
@@ -49,6 +49,6 @@ func (e *InvalidOptionError) Unwrap() error {
 	return e.Err
 }
 
-func (e *InvalidOptionError) Apply(interface{}) error {
+func (e *InvalidOptionError) Apply(any) error {
 	return e
 }

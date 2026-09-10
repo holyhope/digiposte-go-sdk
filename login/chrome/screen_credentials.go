@@ -3,6 +3,7 @@ package chrome
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/input"
@@ -13,6 +14,12 @@ import (
 type credentialsScreen struct {
 	Username string
 	Password string
+
+	// submitted is set once the credentials form has been submitted
+	// successfully, so a slow navigation away from the login page (which can
+	// take longer than a single resolver tick) doesn't cause the form to be
+	// resubmitted with stale/duplicated input.
+	submitted atomic.Bool
 }
 
 var _ Screen = (*credentialsScreen)(nil)
@@ -22,6 +29,10 @@ func (s *credentialsScreen) String() string {
 }
 
 func (s *credentialsScreen) CurrentPageMatches(ctx context.Context) bool {
+	if s.submitted.Load() {
+		return false
+	}
+
 	if s.Username == "" || s.Password == "" {
 		return false
 	}
@@ -41,9 +52,9 @@ func (s *credentialsScreen) CurrentPageMatches(ctx context.Context) bool {
 }
 
 func (s *credentialsScreen) Do(ctx context.Context) error {
-	if err := (&chromedp.Tasks{
-		chromedp.WaitVisible(`#submit`, chromedp.ByID),
-		chromedp.WaitEnabled(`#submit`, chromedp.ByID),
+	err := (&chromedp.Tasks{
+		chromedp.WaitVisible(`#submit-button`, chromedp.ByID),
+		chromedp.WaitEnabled(`#submit-button`, chromedp.ByID),
 
 		chromedp.WaitVisible(`#username`, chromedp.ByID),
 		chromedp.Click(`#username`, chromedp.ByID),
@@ -55,10 +66,13 @@ func (s *credentialsScreen) Do(ctx context.Context) error {
 		s.ClearInput(`#password`, chromedp.ByID),
 		chromedp.SendKeys(`#password`, s.Password, chromedp.ByID),
 
-		chromedp.Click(`#submit`, chromedp.ByID),
-	}).Do(ctx); err != nil {
+		chromedp.Click(`#submit-button`, chromedp.ByID),
+	}).Do(ctx)
+	if err != nil {
 		return fmt.Errorf("tasks: %w", err)
 	}
+
+	s.submitted.Store(true)
 
 	return nil
 }
@@ -67,11 +81,17 @@ func (s *credentialsScreen) ShouldWaitForResponse() bool {
 	return true
 }
 
-func (s *credentialsScreen) ClearInput(sel interface{}, opts ...chromedp.QueryOption) *chromedp.Tasks {
+func (s *credentialsScreen) ClearInput(sel any, opts ...chromedp.QueryOption) *chromedp.Tasks {
 	return &chromedp.Tasks{
 		chromedp.Clear(sel, opts...),
 
-		chromedp.SetValue(sel, "", opts...),
+		// Note: intentionally not using chromedp.SetValue here. It dispatches
+		// synthetic "input"/"change" events and then verifies the field still
+		// holds the value it just set; some login pages mutate the field's
+		// value synchronously in response to those events (client-side
+		// validation/formatting), which makes that verification flaky even
+		// though the field is genuinely empty. The key events below clear it
+		// the same way a real user would.
 
 		input.DispatchKeyEvent(input.KeyDown).WithKey(kb.Control),
 		input.DispatchKeyEvent(input.KeyDown).WithKey("a"),

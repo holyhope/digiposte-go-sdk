@@ -90,10 +90,13 @@ var _ = Describe("Login", func() {
 					debugScreenshot = screenshot
 				}
 			}
+
 			Expect(err).ToNot(HaveOccurred())
 			Expect(token.Valid()).To(BeTrue())
 			Expect(cookies).ToNot(BeEmpty())
 
+			// Local() is only used for a human-readable debug log line.
+			//nolint:gosmopolitan
 			fmt.Fprintf(GinkgoWriter, "Token expires at %v\n", token.Expiry.Local())
 		})
 	})

@@ -1,55 +1,65 @@
-# golangci-lint configuration options
-
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    - tagliatelle # Digiposte API is not consistent, it use snake_case and camelCase
-
-linters-settings:
-  # Gci controls Go package import order and makes it always deterministic.
-  gci:
-    # Section configuration to compare against.
-    # Section names are case-insensitive and may contain parameters in ().
-    # The default order of sections is `standard > default > custom > blank > dot > alias`,
-    # If `custom-order` is `true`, it follows the order of `sections` option.
-    # Default: ["standard", "default"]
-    sections:
-      - standard # Standard section: captures all standard packages.
-      - dot # Dot section: contains all dot imports. This section is not present unless explicitly enabled.
-      - default # Default section: contains all imports that could not be matched to another section type.
-      - prefix(github.com/holyhope/digiposte-go-sdk) # Custom section: groups all imports with the specified Prefix.
-      - blank # Blank section: contains all blank imports. This section is not present unless explicitly enabled.
-
-  depguard:
-    # Default: Only allow $gostd in all files.
+    - tagliatelle
+  settings:
+    depguard:
+      rules:
+        login:
+          list-mode: lax
+          files:
+            - login/**.go
+          allow:
+            - $gostd
+            - github.com/chromedp
+            - github.com/holyhope
+            - github.com/Davincible/chromedp-undetected
+            - github.com/go-oauth2/oauth2/v4
+            - github.com/pquerna/otp
+            - github.com/go-rod/rod/lib/launcher
+        tests:
+          list-mode: lax
+          files:
+            - $test
+          allow:
+            - $gostd
+            - github.com/holyhope
+            - github.com/onsi/ginkgo
+            - github.com/onsi/gomega
+            - github.com/go-rod/rod/lib/launcher
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      login:
-        files:
-          - "login/**.go"
-        list-mode: lax
-        allow:
-          - $gostd
-          - github.com/chromedp
-          - github.com/holyhope
-          - github.com/Davincible/chromedp-undetected
-          - github.com/go-oauth2/oauth2/v4
-          - github.com/pquerna/otp
-          - github.com/go-rod/rod/lib/launcher
-
-      # Name of a rule.
-      tests:
-        files:
-          - "$test"
-        list-mode: lax
-        allow:
-          - $gostd
-          - github.com/holyhope
-          - github.com/onsi/ginkgo
-          - github.com/onsi/gomega
-          - github.com/go-rod/rod/lib/launcher
-
-issues:
-  exclude-rules:
-    - path: _example_test\.go
-      linters:
-        - nosnakecase
+      - linters:
+          - nosnakecase
+        path: _example_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - dot
+        - default
+        - prefix(github.com/holyhope/digiposte-go-sdk)
+        - blank
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

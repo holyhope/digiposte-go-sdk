@@ -23,7 +23,8 @@ func (t *AccessToken) UnmarshalJSON(data []byte) error {
 		IsTokenConsolidated bool    `json:"is_token_consolidated"`
 	}
 
-	if err := json.Unmarshal(data, &aux); err != nil {
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 
@@ -76,7 +77,8 @@ func (t *AppToken) UnmarshalJSON(data []byte) error {
 		Token     string  `json:"app_access_token"`
 	}
 
-	if err := json.Unmarshal(data, &aux); err != nil {
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 

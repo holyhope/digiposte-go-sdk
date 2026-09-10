@@ -45,7 +45,8 @@ func ExampleClient_ListFolders() {
 
 	/* Trash the folder */
 
-	if err := client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("trash: %w", err))
 	}
 
@@ -53,7 +54,8 @@ func ExampleClient_ListFolders() {
 
 	/* Delete the folder */
 
-	if err := client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("delete: %w", err))
 	}
 
@@ -92,7 +94,8 @@ func ExampleClient_GetTrashedFolders() {
 
 	/* Trash the folder */
 
-	if err := client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("trash: %w", err))
 	}
 
@@ -113,7 +116,8 @@ func ExampleClient_GetTrashedFolders() {
 
 	/* Delete the folder */
 
-	if err := client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("delete: %w", err))
 	}
 
@@ -160,7 +164,8 @@ func ExampleClient_RenameFolder() {
 
 	/* Trash the folder */
 
-	if err := client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("trash: %w", err))
 	}
 
@@ -168,7 +173,8 @@ func ExampleClient_RenameFolder() {
 
 	/* Delete the folder */
 
-	if err := client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("delete: %w", err))
 	}
 
@@ -206,7 +212,8 @@ func ExampleClient_CreateFolder() {
 
 	fmt.Printf("Folder %q created\n", folder.Name)
 
-	if _, err := client.CreateFolder(ctx, folder.InternalID, "sub-folder"); err != nil {
+	_, err = client.CreateFolder(ctx, folder.InternalID, "sub-folder")
+	if err != nil {
 		panic(fmt.Errorf("create folder: %w", err))
 	}
 
@@ -214,7 +221,8 @@ func ExampleClient_CreateFolder() {
 
 	/* Trash the top folder */
 
-	if err := client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Trash(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("trash: %w", err))
 	}
 
@@ -222,7 +230,8 @@ func ExampleClient_CreateFolder() {
 
 	/* Delete the top folder */
 
-	if err := client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID}); err != nil {
+	err = client.Delete(ctx, nil, []digiposte.FolderID{folder.InternalID})
+	if err != nil {
 		panic(fmt.Errorf("delete: %w", err))
 	}
 

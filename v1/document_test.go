@@ -22,11 +22,13 @@ var _ = ginkgo.Describe("Document", func() {
 			return
 		}
 
-		if err := digiposteClient.Trash(ctx, []digiposte.DocumentID{document.InternalID}, nil); err != nil {
+		err := digiposteClient.Trash(ctx, []digiposte.DocumentID{document.InternalID}, nil)
+		if err != nil {
 			fmt.Fprintf(ginkgo.GinkgoWriter, "trash: %v\n", err)
 		}
 
-		if err := digiposteClient.Delete(ctx, []digiposte.DocumentID{document.InternalID}, nil); err != nil {
+		err = digiposteClient.Delete(ctx, []digiposte.DocumentID{document.InternalID}, nil)
+		if err != nil {
 			fmt.Fprintf(ginkgo.GinkgoWriter, "delete: %v\n", err)
 		}
 	})
@@ -63,11 +65,13 @@ var _ = ginkgo.Describe("Document", func() {
 		})
 
 		ginkgo.AfterEach(func(ctx ginkgo.SpecContext) {
-			if err := digiposteClient.Trash(ctx, []digiposte.DocumentID{document.InternalID}, nil); err != nil {
+			err := digiposteClient.Trash(ctx, []digiposte.DocumentID{document.InternalID}, nil)
+			if err != nil {
 				fmt.Fprintf(ginkgo.GinkgoWriter, "trash: %v\n", err)
 			}
 
-			if err := digiposteClient.Delete(ctx, []digiposte.DocumentID{document.InternalID}, nil); err != nil {
+			err = digiposteClient.Delete(ctx, []digiposte.DocumentID{document.InternalID}, nil)
+			if err != nil {
 				fmt.Fprintf(ginkgo.GinkgoWriter, "delete: %v\n", err)
 			}
 		})

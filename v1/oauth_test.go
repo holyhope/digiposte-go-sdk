@@ -13,6 +13,8 @@ import (
 	"github.com/holyhope/digiposte-go-sdk/v1"
 )
 
+const testAccessToken = "token"
+
 var _ = ginkgo.Describe("Oauth", func() {
 	var (
 		server    *ghttp.Server
@@ -42,7 +44,7 @@ var _ = ginkgo.Describe("Oauth", func() {
 				ghttp.CombineHandlers(
 					ghttp.VerifyRequest("GET", "/rest/security/token"),
 					ghttp.RespondWithJSONEncoded(http.StatusOK, &digiposte.AccessToken{
-						Token:               "token",
+						Token:               testAccessToken,
 						ExpiresAt:           expiresAt,
 						IsTokenConsolidated: true,
 					}),
@@ -52,7 +54,7 @@ var _ = ginkgo.Describe("Oauth", func() {
 				ghttp.CombineHandlers(
 					ghttp.VerifyRequest("GET", "/rest/security/token"),
 					ghttp.RespondWithJSONEncoded(http.StatusOK, &digiposte.AccessToken{
-						Token:               "token",
+						Token:               testAccessToken,
 						ExpiresAt:           expiresAt,
 						IsTokenConsolidated: true,
 					}),
@@ -60,7 +62,7 @@ var _ = ginkgo.Describe("Oauth", func() {
 			)
 
 			gomega.Expect(tokenSource.Token()).To(gstruct.PointTo(gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
-				"AccessToken":  gomega.Equal("token"),
+				"AccessToken":  gomega.Equal(testAccessToken),
 				"TokenType":    gomega.Equal("Bearer"),
 				"RefreshToken": gomega.Equal(""),
 				"Expiry":       gomega.BeTemporally("~", expiresAt, time.Millisecond),

@@ -32,12 +32,13 @@ func Example() { //nolint:funlen
 	/* Handle the cleanup of the created folders and documents */
 
 	var (
-		folders   []digiposte.FolderID
-		documents []digiposte.DocumentID
+		folders   = make([]digiposte.FolderID, 0, 1)
+		documents = make([]digiposte.DocumentID, 0, 1)
 	)
 
 	defer func(ctx context.Context) {
-		if err := client.Delete(ctx, documents, folders); err != nil {
+		err := client.Delete(ctx, documents, folders)
+		if err != nil {
 			panic(fmt.Errorf("cleanup (documents %+v, folders %+v): %w", documents, folders, err))
 		}
 
@@ -45,7 +46,8 @@ func Example() { //nolint:funlen
 	}(context.Background())
 
 	defer func(ctx context.Context) {
-		if err := client.Trash(ctx, documents, folders); err != nil {
+		err := client.Trash(ctx, documents, folders)
+		if err != nil {
 			panic(fmt.Errorf("trash (documents %+v, folders %+v): %w", documents, folders, err))
 		}
 

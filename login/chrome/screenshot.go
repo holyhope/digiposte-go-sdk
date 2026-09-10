@@ -19,7 +19,8 @@ func (c *chromeLogin) ScreenshotIfNeeded(ctx context.Context, err error) error {
 func (c *chromeLogin) wrapWithScreenshot(ctx context.Context, rootErr error) error {
 	var imageData []byte
 
-	if err := chromedp.Run(ctx, chromedp.FullScreenshot(&imageData, jpeg.DefaultQuality)); err != nil {
+	err := chromedp.Run(ctx, chromedp.FullScreenshot(&imageData, jpeg.DefaultQuality))
+	if err != nil {
 		errorLogger(ctx).Printf("Failed to take screenshot: %v\n", err)
 
 		return rootErr
@@ -34,8 +35,8 @@ func (c *chromeLogin) wrapWithScreenshot(ctx context.Context, rootErr error) err
 }
 
 func GetScreenShot(err error) ([]byte, bool) {
-	var targetErr *WithScreenshotError
-	if errors.As(err, &targetErr) {
+	targetErr, ok := errors.AsType[*WithScreenshotError](err)
+	if ok {
 		return targetErr.Screenshot, true
 	}
 

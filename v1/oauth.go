@@ -39,7 +39,8 @@ func (ts *TokenSource) Token() (*oauth2.Token, error) {
 
 	token := new(AccessToken)
 
-	if err := ts.call(req, token); err != nil {
+	err = ts.call(req, token)
+	if err != nil {
 		return nil, fmt.Errorf("call: %w", err)
 	}
 
@@ -48,5 +49,6 @@ func (ts *TokenSource) Token() (*oauth2.Token, error) {
 		Expiry:       token.ExpiresAt,
 		TokenType:    "Bearer",
 		RefreshToken: "",
+		ExpiresIn:    0,
 	}, nil
 }

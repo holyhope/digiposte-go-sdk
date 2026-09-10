@@ -78,7 +78,8 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 	if err != nil {
 		screenshot, ok := chrome.GetScreenShot(err)
 		if ok {
-			if err := os.WriteFile("screenshot.png", screenshot, 0o600); err != nil {
+			err := os.WriteFile("screenshot.png", screenshot, 0o600)
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to save the screenshot: %v\n", err)
 			} else {
 				fmt.Fprintf(os.Stderr, "Screenshot saved to %q\n", "screenshot.png")
@@ -93,11 +94,13 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 
 type rateLimitedTransport struct {
 	http.RoundTripper
+
 	rateLimiter *rate.Limiter
 }
 
 func (t *rateLimitedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if err := t.rateLimiter.Wait(req.Context()); err != nil {
+	err := t.rateLimiter.Wait(req.Context())
+	if err != nil {
 		return nil, fmt.Errorf("rate limited: %w", err)
 	}
 
