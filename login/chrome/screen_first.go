@@ -32,13 +32,11 @@ func (s *firstScreen) Do(ctx context.Context) error {
 		return &MissingOptionError{Option: "WithURL"}
 	}
 
-	err := seedCookies(ctx, s.URL, s.Cookies)
-	if err != nil {
+	if err := seedCookies(ctx, s.URL, s.Cookies); err != nil {
 		return fmt.Errorf("seed cookies: %w", err)
 	}
 
-	err = chromedp.Navigate(s.URL).Do(ctx)
-	if err != nil {
+	if err := chromedp.Navigate(s.URL).Do(ctx); err != nil {
 		return fmt.Errorf("navigate: %w", err)
 	}
 
