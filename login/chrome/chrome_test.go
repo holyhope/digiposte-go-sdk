@@ -1,8 +1,11 @@
 package chrome_test
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path"
 	"time"
@@ -98,6 +101,94 @@ var _ = Describe("Login", func() {
 			// Local() is only used for a human-readable debug log line.
 			//nolint:gosmopolitan
 			fmt.Fprintf(GinkgoWriter, "Token expires at %v\n", token.Expiry.Local())
+		})
+
+		// These two specs cover the WithCookies-seeding behavior added for
+		// session persistence (see login/persistent): a still-valid seeded
+		// session should let the site skip the credentials/OTP/trusted-device
+		// screens entirely, while a seeded session that is not (or no longer)
+		// authenticated should leave the normal flow unaffected. Both drive a
+		// real login against the configured site, so they are gated by the
+		// same env vars (and Skip) as "Should work" above.
+		Context("With a previously seeded session", func() {
+			newSeededMethod := func(cookies []*http.Cookie, logs io.Writer) login.Method {
+				chromeBinary, err := launcher.NewBrowser().Get()
+				Expect(err).ToNot(HaveOccurred())
+
+				seededMethod, err := chrome.New(
+					chrome.WithURL(os.Getenv("DIGIPOSTE_URL")),
+					chrome.WithCookies(cookies),
+					chrome.WithRefreshFrequency(500*time.Millisecond),
+					chrome.WithLoggers(
+						log.New(io.MultiWriter(logs, GinkgoWriter), "[INFO] ", log.Ldate|log.Ltime|log.Lmsgprefix),
+						log.New(io.MultiWriter(logs, GinkgoWriter), "[ERRO] ", log.Ldate|log.Ltime|log.Lmsgprefix),
+					),
+					chrome.WithScreenShortOnError(),
+					chrome.WithTimeout(3*time.Minute),
+					chrome.WithBinary(chromeBinary),
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				return seededMethod
+			}
+
+			It("Should skip the credentials, OTP and trusted-device screens for a still-valid session", func(ctx SpecContext) {
+				_, cookies, err := chromeMethod.Login(ctx, &login.Credentials{
+					Username:  username,
+					Password:  password,
+					OTPSecret: otpSecret,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cookies).ToNot(BeEmpty())
+
+				var logs bytes.Buffer
+
+				// Real credentials are still passed: if the seeded cookies did
+				// not actually short-circuit the interactive flow, the
+				// credentials screen would happily use them and this spec
+				// would not catch the regression.
+				_, _, err = newSeededMethod(cookies, &logs).Login(ctx, &login.Credentials{
+					Username:  username,
+					Password:  password,
+					OTPSecret: otpSecret,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(logs.String()).ToNot(ContainSubstring("[credentials screen] Resolving screen"))
+				Expect(logs.String()).ToNot(ContainSubstring("[OTP screen] Resolving screen"))
+				Expect(logs.String()).ToNot(ContainSubstring("[trusted device screen] Resolving screen"))
+			})
+
+			It("Should run the normal flow when the seeded session is not authenticated", func(ctx SpecContext) {
+				var logs bytes.Buffer
+
+				staleCookies := []*http.Cookie{{
+					Name:        "not-a-real-session",
+					Value:       "stale",
+					Path:        "",
+					Domain:      "",
+					Expires:     time.Time{},
+					RawExpires:  "",
+					MaxAge:      0,
+					Secure:      false,
+					HttpOnly:    false,
+					SameSite:    http.SameSiteDefaultMode,
+					Partitioned: false,
+					Raw:         "",
+					Unparsed:    nil,
+					Quoted:      false,
+				}}
+
+				token, _, err := newSeededMethod(staleCookies, &logs).Login(ctx, &login.Credentials{
+					Username:  username,
+					Password:  password,
+					OTPSecret: otpSecret,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(token.Valid()).To(BeTrue())
+
+				Expect(logs.String()).To(ContainSubstring("[credentials screen] Resolving screen"))
+			})
 		})
 	})
 
