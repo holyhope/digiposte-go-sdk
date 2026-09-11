@@ -33,6 +33,13 @@ The system SHALL perform a full interactive login when the store has no session,
 - **WHEN** a session-resuming login is attempted and the store returns an error while loading a session
 - **THEN** the system performs an interactive login instead of failing the overall login attempt
 
+### Requirement: Fallback does not perform cookie-based token renewal
+The system SHALL NOT attempt a network-based token renewal (e.g. over plain HTTP using stored cookies) before falling back to an interactive login. The fallback SHALL seed stored cookies into the interactive method and proceed with that method's normal behavior.
+
+#### Scenario: Expired token still launches interactive login without a renewal attempt
+- **WHEN** a session-resuming login is attempted and the store returns a session whose token is expired
+- **THEN** the system does not perform any network call to renew the token before seeding its cookies into and invoking the interactive login method
+
 ### Requirement: Seed a previously stored session into an interactive login attempt
 When falling back to an interactive login after loading a stored session (valid or not), the system SHALL make the stored session's cookies available to that interactive login attempt, so that a still-authenticated site session can be recognized without re-entering credentials.
 
@@ -53,7 +60,7 @@ The system SHALL save the resulting token and cookies to the configured store af
 
 #### Scenario: Save failure does not fail the login
 - **WHEN** an interactive or resumed login completes successfully but the configured store returns an error while saving
-- **THEN** the login call still returns the obtained token and cookies successfully, and the save error is reported separately rather than as a login failure
+- **THEN** the login call still returns the obtained token and cookies successfully; the system does not add any additional reporting of the save error beyond what the store's own `Save` implementation already does
 
 ### Requirement: No implicit persistence to disk
 The system SHALL NOT persist a session to any storage medium unless the caller has explicitly configured a store. The system SHALL NOT ship a default store implementation that writes session data to disk automatically.

@@ -53,12 +53,10 @@ var _ = Describe("New", func() {
 		store *fakeStore
 		creds *login.Credentials
 
-		inner        *mockedLoginMethod
-		seedCookies  []*http.Cookie
-		nbFactory    int
-		factoryErr   error
-		saveErrors   []error
-		methodOption persistent.Option
+		inner       *mockedLoginMethod
+		seedCookies []*http.Cookie
+		nbFactory   int
+		factoryErr  error
 	)
 
 	BeforeEach(func() {
@@ -80,10 +78,6 @@ var _ = Describe("New", func() {
 		seedCookies = nil
 		nbFactory = 0
 		factoryErr = nil
-		saveErrors = nil
-		methodOption = persistent.WithSaveErrorHandler(func(err error) {
-			saveErrors = append(saveErrors, err)
-		})
 	})
 
 	newMethod := func() persistent.NewMethod {
@@ -101,7 +95,7 @@ var _ = Describe("New", func() {
 
 	Context("When the store has no session", func() {
 		It("Falls back to the factory with no seed cookies and saves the result", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			token, cookies, err := m.Login(context.Background(), creds)
 			Expect(err).ToNot(HaveOccurred())
@@ -126,7 +120,7 @@ var _ = Describe("New", func() {
 		})
 
 		It("Resumes the stored session without calling the factory", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			token, cookies, err := m.Login(context.Background(), creds)
 			Expect(err).ToNot(HaveOccurred())
@@ -138,7 +132,7 @@ var _ = Describe("New", func() {
 		})
 
 		It("Still saves the resumed session", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			_, _, err := m.Login(context.Background(), creds)
 			Expect(err).ToNot(HaveOccurred())
@@ -159,7 +153,7 @@ var _ = Describe("New", func() {
 		})
 
 		It("Falls back to the factory, seeding the stored cookies", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			token, _, err := m.Login(context.Background(), creds)
 			Expect(err).ToNot(HaveOccurred())
@@ -176,7 +170,7 @@ var _ = Describe("New", func() {
 		})
 
 		It("Falls back to the factory instead of failing the login", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			token, _, err := m.Login(context.Background(), creds)
 			Expect(err).ToNot(HaveOccurred())
@@ -191,25 +185,12 @@ var _ = Describe("New", func() {
 		})
 
 		It("Still returns the obtained token and cookies successfully", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			token, cookies, err := m.Login(context.Background(), creds)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(token).To(Equal(inner.Token))
 			Expect(cookies).To(Equal(inner.Cookies))
-		})
-
-		It("Reports the save error through the save-error handler", func() {
-			m := persistent.New(store, newMethod(), methodOption)
-
-			_, _, err := m.Login(context.Background(), creds)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(saveErrors).To(HaveLen(1))
-			Expect(saveErrors[0]).To(MatchError(errBoom))
-
-			var saveErr *persistent.SaveError
-			Expect(errors.As(saveErrors[0], &saveErr)).To(BeTrue())
 		})
 	})
 
@@ -219,7 +200,7 @@ var _ = Describe("New", func() {
 		})
 
 		It("Returns the error and does not save anything", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			_, _, err := m.Login(context.Background(), creds)
 			Expect(err).To(HaveOccurred())
@@ -233,7 +214,7 @@ var _ = Describe("New", func() {
 		})
 
 		It("Returns the error and does not save anything", func() {
-			m := persistent.New(store, newMethod(), methodOption)
+			m := persistent.New(store, newMethod())
 
 			_, _, err := m.Login(context.Background(), creds)
 			Expect(err).To(HaveOccurred())
@@ -243,24 +224,11 @@ var _ = Describe("New", func() {
 
 	Context("When constructed with a nil store", func() {
 		It("Returns an error instead of calling the factory", func() {
-			m := persistent.New(nil, newMethod(), methodOption)
+			m := persistent.New(nil, newMethod())
 
 			_, _, err := m.Login(context.Background(), creds)
 			Expect(err).To(HaveOccurred())
 			Expect(nbFactory).To(Equal(0))
-		})
-	})
-
-	Context("With no save-error handler configured", func() {
-		BeforeEach(func() {
-			store.saveErr = errBoom
-		})
-
-		It("Uses the default handler and still succeeds", func() {
-			m := persistent.New(store, newMethod())
-
-			_, _, err := m.Login(context.Background(), creds)
-			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"golang.org/x/oauth2"
@@ -27,36 +26,6 @@ type NewMethod func(seedCookies []*http.Cookie) (login.Method, error)
 // first time it would actually be used.
 var errNilStore = errors.New("persistent: store must not be nil")
 
-// SaveError wraps an error returned by Store.Save. It is only ever passed to
-// an Option's save-error handler (see WithSaveErrorHandler); it is never
-// returned from Login, so a Store.Save failure never turns an otherwise
-// successful login into a failed one.
-type SaveError struct {
-	Err error
-}
-
-func (e *SaveError) Error() string {
-	return fmt.Sprintf("save session: %v", e.Err)
-}
-
-func (e *SaveError) Unwrap() error {
-	return e.Err
-}
-
-// Option customizes the login.Method returned by New.
-type Option func(*method)
-
-// WithSaveErrorHandler overrides how a Store.Save error is reported after a
-// login has already succeeded. The default handler logs the error via
-// log.Default(). The handler is never used to fail Login: per the package
-// contract, a save failure is reported separately and does not affect the
-// token and cookies Login returns.
-func WithSaveErrorHandler(handler func(error)) Option {
-	return func(m *method) {
-		m.onSaveError = handler
-	}
-}
-
 // New returns a login.Method that resumes a previously stored session via
 // store when it is still valid, instead of calling newMethod. store must not
 // be nil; a caller that wants a plain, never-persisted login should simply
@@ -71,28 +40,19 @@ func WithSaveErrorHandler(handler func(error)) Option {
 //     were none), and Login delegates to the resulting login.Method.
 //   - After a successful login, whether resumed or obtained from newMethod,
 //     the resulting token and cookies are saved via store.Save. A Save
-//     error is reported through the configured save-error handler (see
-//     WithSaveErrorHandler) and does not cause Login to return an error.
-func New(store Store, newMethod NewMethod, opts ...Option) login.Method { //nolint:ireturn
-	resumeMethod := &method{
+//     error is discarded: Store is caller-supplied, so the caller's own
+//     Save implementation already has the error and is responsible for
+//     handling it (logging, retrying, alerting); Login never returns it.
+func New(store Store, newMethod NewMethod) login.Method { //nolint:ireturn
+	return &method{
 		store:     store,
 		newMethod: newMethod,
-		onSaveError: func(err error) {
-			log.Printf("digiposte-go-sdk/login/persistent: %v", err)
-		},
 	}
-
-	for _, opt := range opts {
-		opt(resumeMethod)
-	}
-
-	return resumeMethod
 }
 
 type method struct {
-	store       Store
-	newMethod   NewMethod
-	onSaveError func(error)
+	store     Store
+	newMethod NewMethod
 }
 
 var _ login.Method = (*method)(nil)
@@ -107,10 +67,7 @@ func (m *method) Login(ctx context.Context, creds *login.Credentials) (*oauth2.T
 		return nil, nil, err
 	}
 
-	saveErr := m.store.Save(ctx, &Session{Token: token, Cookies: cookies})
-	if saveErr != nil {
-		m.onSaveError(&SaveError{Err: saveErr})
-	}
+	_ = m.store.Save(ctx, &Session{Token: token, Cookies: cookies})
 
 	return token, cookies, nil
 }
