@@ -62,7 +62,8 @@ func (c *chromeLogin) login(
 	defer c.WrapError(independentChromeCtx, &finalErr)
 
 	err := resolve(ctx, &firstScreen{
-		URL: c.url,
+		URL:     c.url,
+		Cookies: c.cookies,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("first screen: %w", err)

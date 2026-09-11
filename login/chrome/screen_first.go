@@ -3,12 +3,18 @@ package chrome
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/chromedp/chromedp"
 )
 
 type firstScreen struct {
 	URL string
+
+	// Cookies, when non-empty, are seeded into the browser before URL is
+	// navigated to, so that a still-authenticated site session is recognized
+	// without driving the interactive login screens. See WithCookies.
+	Cookies []*http.Cookie
 }
 
 var _ Screen = (*firstScreen)(nil)
@@ -26,7 +32,12 @@ func (s *firstScreen) Do(ctx context.Context) error {
 		return &MissingOptionError{Option: "WithURL"}
 	}
 
-	err := chromedp.Navigate(s.URL).Do(ctx)
+	err := seedCookies(ctx, s.URL, s.Cookies)
+	if err != nil {
+		return fmt.Errorf("seed cookies: %w", err)
+	}
+
+	err = chromedp.Navigate(s.URL).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("navigate: %w", err)
 	}
@@ -37,39 +48,3 @@ func (s *firstScreen) Do(ctx context.Context) error {
 func (s *firstScreen) ShouldWaitForResponse() bool {
 	return true
 }
-
-/*
-func injectCookies(currentURL *url.URL, cookies []*http.Cookie) chromedp.Action {
-	var injectCookies chromedp.Tasks
-
-	for _, cookie := range cookies {
-		injectCookies = append(injectCookies, chromeCookie(currentURL, cookie))
-	}
-
-	return injectCookies
-}
-
-func chromeCookie(u *url.URL, cookie *http.Cookie) *network.SetCookieParams {
-	expire := cdp.TimeSinceEpoch(cookie.Expires)
-
-	var sameSite network.CookieSameSite
-
-	switch cookie.SameSite {
-	case http.SameSiteLaxMode:
-		sameSite = network.CookieSameSiteLax
-	case http.SameSiteStrictMode:
-		sameSite = network.CookieSameSiteStrict
-	case http.SameSiteNoneMode, http.SameSiteDefaultMode:
-		sameSite = network.CookieSameSiteNone
-	}
-
-	return network.SetCookie(cookie.Name, cookie.Value).
-		WithDomain(u.Hostname()).
-		WithPath(u.Path).
-		WithURL(u.String()).
-		WithExpires(&expire).
-		WithHTTPOnly(cookie.HttpOnly).
-		WithSecure(cookie.Secure).
-		WithSameSite(sameSite)
-}
-*/
