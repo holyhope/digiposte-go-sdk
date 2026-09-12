@@ -50,6 +50,7 @@ if err != nil {
 | [`login/chrome`](login/chrome/) | Interactive, browser-driven login. Drives a real (headless) Chromium instance through Digiposte's credentials, one-time-passcode, and trusted-device screens. It is the only way to obtain a session today, and is slow and rate-limit-sensitive if run on every process start. |
 | [`login/oauth`](login/oauth/) | Adapts a `login.Method` into an `oauth2.TokenSource`, so it composes with `oauth2.ReuseTokenSource` and `oauth2.Transport` like any other token source. |
 | [`login/persistent`](login/persistent/) | Decorates a `login.Method` so a previously obtained session is resumed instead of driving the interactive login again on every run - see below. |
+| [`login/partner`](login/partner/) | Authenticates as a registered Digiposte **Partenaire** against the official [Partner API v3](https://developer.laposte.fr/catalog-apis/digiposte@3) - a separate authentication model from every method above, see below. |
 
 ## Authentication
 
@@ -64,6 +65,17 @@ The [`login`](login/) package provides a simple way to authenticate and get an a
 Driving that browser-based login on every run is fragile and can trigger rate limiting. The [`login/persistent`](login/persistent/) package lets a caller reuse a previously obtained session instead: it defines a `Store` contract for loading/saving a session (an OAuth token and its cookies) and a `login.Method` decorator that resumes a still-valid stored session with no browser at all, or falls back to an interactive login otherwise, seeding any stored cookies into it so an already-authenticated site session is recognized without re-entering credentials.
 
 `login/persistent` ships **no default `Store` implementation** - a stored session is equivalent to live account credentials, so callers must provide and protect their own storage (see the `Store` doc comment). See [`login/persistent/example_test.go`](login/persistent/example_test.go)'s `ExampleNew` for the full composition pattern, and `v1.Config`'s `PreviousSession`/`SessionListener` fields for wiring the same persistence directly into the `v1` client.
+
+### Partner API authentication (`login/partner`)
+
+Everything above authenticates as **yourself**, against your own vault. The [`login/partner`](login/partner/) package is unrelated to it: it authenticates as a registered Digiposte **Partenaire** (an organization) against the official [Partner API v3](https://developer.laposte.fr/catalog-apis/digiposte@3), which is a separate REST API (fronted by La Poste's OKAPI gateway) with its own OAuth2 flows and a mandatory `X-Okapi-Key` header on every request. It does not use `login.Method`, does not touch cookies, and does not require or affect any self-vault session.
+
+It supports the two grants the Partner API documents:
+
+- `client_credentials` (server-to-server, no end-user interaction) via `partner.NewClientCredentialsSource`, returning a standard `oauth2.TokenSource`.
+- `authorization_code` + PKCE (requires the target Digiposte end user's consent) via `partner.NewAuthorizationCodeFlow`, whose `AuthCodeURL()`/`Exchange(...)` methods drive the redirect round trip.
+
+Both take a caller-supplied `partner.Endpoint` (`AuthURL`/`TokenURL`/`AuthStyle`) rather than a hardcoded sandbox/production URL, since those are specific to each partner's own OKAPI/Swagger contract. `login/partner` only produces a token - it does not implement any Partner API resource endpoint (memberships/adhésions, document deposit) yet.
 
 ## Status
 
