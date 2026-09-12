@@ -1,7 +1,7 @@
 ## 1. Package scaffolding
 
 - [ ] 1.1 Create `login/partner` package with a doc comment explaining its scope (Partner API OAuth2 authentication only, independent of `login`) and verify `GOWORK=off go build ./login/partner/...` succeeds with an empty package
-- [ ] 1.2 Add `Endpoint` config type (`AuthURL`, `TokenURL` string fields) shared by both grants, and verify it round-trips into `oauth2.Endpoint`/`clientcredentials.Config.Endpoint` via a small unit test
+- [ ] 1.2 Add `Endpoint` config type (`AuthURL`, `TokenURL` string fields, `AuthStyle oauth2.AuthStyle`, mirroring `oauth2.Endpoint`) shared by both grants, and verify it round-trips into `oauth2.Config.Endpoint`/`clientcredentials.Config.{TokenURL,AuthStyle}` via a small unit test, including that an unset `AuthStyle` maps to `oauth2.AuthStyleInHeader` rather than `oauth2.AuthStyleAutoDetect`
 
 ## 2. Okapi key transport
 
@@ -11,9 +11,9 @@
 
 ## 3. Client credentials grant
 
-- [ ] 3.1 Implement `ClientCredentialsConfig` (`ClientID`, `ClientSecret`, `Endpoint`, `OkapiKey`, optional `Scopes`) and `NewClientCredentialsSource(cfg ClientCredentialsConfig) (oauth2.TokenSource, error)` wrapping `clientcredentials.Config.TokenSource`, and verify with a unit test against an `httptest.Server` stub token endpoint that a valid response yields a usable `*oauth2.Token`
-- [ ] 3.2 Verify (unit test) that a token-endpoint error response (e.g. `invalid_client`/`bad_credentials`) surfaces as a returned `error` with no token, and is not retried automatically
-- [ ] 3.3 Verify (unit test) that every request to the stub token endpoint carries the `X-Okapi-Key` header from `2.1`/`2.2`
+- [ ] 3.1 Implement `ClientCredentialsConfig` (`ClientID`, `ClientSecret`, `Endpoint`, `OkapiKey`, `Timeout time.Duration` defaulting to 30s when zero, optional `Scopes`) and `NewClientCredentialsSource(ctx context.Context, cfg ClientCredentialsConfig) (oauth2.TokenSource, error)` wrapping `clientcredentials.Config.TokenSource(ctx)`, passing `Endpoint.AuthStyle` (defaulted per 1.2) straight through to `clientcredentials.Config.AuthStyle`, and verify with a unit test against an `httptest.Server` stub token endpoint that a valid response yields a usable `*oauth2.Token`
+- [ ] 3.2 Verify (unit test) that a token-endpoint error response (e.g. `invalid_client`/`bad_credentials`) surfaces as a returned `error` with no token, results in exactly one request to the stub server (no auto-retry with credentials moved to the form body), and that cancelling the constructor's `ctx` aborts an in-flight request
+- [ ] 3.3 Verify (unit test) that every request to the stub token endpoint carries the `X-Okapi-Key` header from `2.1`/`2.2`, and that a stub server which never responds causes `Token()` to return an error once `Timeout` elapses rather than hanging indefinitely
 
 ## 4. Authorization code + PKCE grant
 
