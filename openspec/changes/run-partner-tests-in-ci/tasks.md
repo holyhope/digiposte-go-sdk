@@ -16,10 +16,10 @@
 ## 4. Scheduled CI step
 
 - [x] 4.1 Add a `Test login/partner (live sandbox)` step to the `tests` job in `.github/workflows/test.yml`, gated `if: ${{ !cancelled() && github.event_name == 'schedule' }}`, running `go test -v ./login/partner/... -ginkgo.v --args --ginkgo.label-filter=live` with `env: DIGIPOSTE_OKAPI_TOKEN: ${{ secrets.DIGIPOSTE_OKAPI_TOKEN }}`
-- [ ] 4.2 Document (in the PR description or a repo README note) that a maintainer must add the `DIGIPOSTE_OKAPI_TOKEN` repository secret for this step to actually run instead of no-op skipping
+- [x] 4.2 Document (in the PR description or a repo README note) that a maintainer must add the `DIGIPOSTE_OKAPI_TOKEN` repository secret for this step to actually run instead of no-op skipping
 
 ## 5. Verification
 
 - [x] 5.1 Run `actionlint .github/workflows/test.yml` (or `yamllint -f parsable .github/workflows/test.yml` per the file's own header comment, whichever is available) and verify no new errors are introduced by the edit
-- [ ] 5.2 Push the change and verify in the resulting GitHub Actions run (push/PR event) that the new `Test login/partner` step appears, passes, and reports the live spec as skipped; verify the existing `Test` (`v1`) step and `lint` job are unaffected
+- [x] 5.2 Push the change and verify in the resulting GitHub Actions run (push/PR event) that the new `Test login/partner` step appears, passes, and reports the live spec as skipped; verify the existing `Test` (`v1`) step and `lint` job are unaffected
 - [ ] 5.3 After the `DIGIPOSTE_OKAPI_TOKEN` secret is added, manually trigger or wait for the weekly `schedule` run and verify the `Test login/partner (live sandbox)` step appears and passes
