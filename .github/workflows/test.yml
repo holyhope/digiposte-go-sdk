@@ -13,6 +13,7 @@ on:
       - '!**_test.go'
       - 'v1/**'
       - 'login/partner/**'
+      - '.github/workflows/test.yml'
     branches:
       - main
   pull_request:
@@ -21,6 +22,7 @@ on:
       - '!**_test.go'
       - 'v1/**'
       - 'login/partner/**'
+      - '.github/workflows/test.yml'
 
 jobs:
   tests:
@@ -51,10 +53,11 @@ jobs:
           DIGIPOSTE_OTP_SECRET: ${{ secrets.DIGIPOSTE_OTP_SECRET }}
 
       - name: Test login/partner
+        if: ${{ !cancelled() }}
         run: go test -v ./login/partner/... -ginkgo.v
 
       - name: Test login/partner (live sandbox)
-        if: github.event_name == 'schedule'
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
         run: >-
           go test -v ./login/partner/...
           -ginkgo.v --args --ginkgo.label-filter=live

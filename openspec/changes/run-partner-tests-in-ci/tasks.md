@@ -1,10 +1,10 @@
 ## 1. Workflow trigger
 
-- [x] 1.1 Add `login/partner/**` as an additional `paths` entry to both the `push` and `pull_request` triggers in `.github/workflows/test.yml`, and verify (by re-reading the file) that a hypothetical change touching only `login/partner/okapi_test.go` would now match at least one `paths` pattern (it doesn't today, since it's excluded by `!**_test.go` and isn't under `v1/**`)
+- [x] 1.1 Add `login/partner/**` and `.github/workflows/test.yml` as additional `paths` entries to both the `push` and `pull_request` triggers in `.github/workflows/test.yml`, and verify (by re-reading the file) that a hypothetical change touching only `login/partner/okapi_test.go`, or only `test.yml` itself, would now match at least one `paths` pattern (neither did before: `!**_test.go` excludes the former and neither matched `v1/**`; the workflow file itself matched nothing at all - caught in review, see PR #30)
 
 ## 2. Test step
 
-- [x] 2.1 Add a `Test login/partner` step to the `tests` job in `.github/workflows/test.yml`, running `go test -v ./login/partner/... -ginkgo.v` with no `env:` block, placed after the existing `Test` (`v1`) step
+- [x] 2.1 Add a `Test login/partner` step to the `tests` job in `.github/workflows/test.yml`, running `go test -v ./login/partner/... -ginkgo.v` with no `env:` block, placed after the existing `Test` (`v1`) step with `if: ${{ !cancelled() }}` so a `v1` failure doesn't implicitly skip it (caught in review, see PR #30)
 - [x] 2.2 Verify locally with `GOWORK=off go test -v ./login/partner/... -ginkgo.v` that the exact command added to the workflow passes
 
 ## 3. Live sandbox spec
@@ -15,7 +15,7 @@
 
 ## 4. Scheduled CI step
 
-- [x] 4.1 Add a `Test login/partner (live sandbox)` step to the `tests` job in `.github/workflows/test.yml`, gated `if: github.event_name == 'schedule'`, running `go test -v ./login/partner/... -ginkgo.v --args --ginkgo.label-filter=live` with `env: DIGIPOSTE_OKAPI_TOKEN: ${{ secrets.DIGIPOSTE_OKAPI_TOKEN }}`
+- [x] 4.1 Add a `Test login/partner (live sandbox)` step to the `tests` job in `.github/workflows/test.yml`, gated `if: ${{ !cancelled() && github.event_name == 'schedule' }}`, running `go test -v ./login/partner/... -ginkgo.v --args --ginkgo.label-filter=live` with `env: DIGIPOSTE_OKAPI_TOKEN: ${{ secrets.DIGIPOSTE_OKAPI_TOKEN }}`
 - [ ] 4.2 Document (in the PR description or a repo README note) that a maintainer must add the `DIGIPOSTE_OKAPI_TOKEN` repository secret for this step to actually run instead of no-op skipping
 
 ## 5. Verification
