@@ -12,6 +12,7 @@ on:
       - '**.go'
       - '!**_test.go'
       - 'v1/**'
+      - 'login/partner/**'
     branches:
       - main
   pull_request:
@@ -19,6 +20,7 @@ on:
       - '**.go'
       - '!**_test.go'
       - 'v1/**'
+      - 'login/partner/**'
 
 jobs:
   tests:
@@ -47,6 +49,17 @@ jobs:
           DIGIPOSTE_USERNAME: ${{ secrets.DIGIPOSTE_USERNAME }}
           DIGIPOSTE_PASSWORD: ${{ secrets.DIGIPOSTE_PASSWORD }}
           DIGIPOSTE_OTP_SECRET: ${{ secrets.DIGIPOSTE_OTP_SECRET }}
+
+      - name: Test login/partner
+        run: go test -v ./login/partner/... -ginkgo.v
+
+      - name: Test login/partner (live sandbox)
+        if: github.event_name == 'schedule'
+        run: >-
+          go test -v ./login/partner/...
+          -ginkgo.v --args --ginkgo.label-filter=live
+        env:
+          DIGIPOSTE_OKAPI_TOKEN: ${{ secrets.DIGIPOSTE_OKAPI_TOKEN }}
 
       - name: Get debug screenshots
         uses: actions/upload-artifact@v7
