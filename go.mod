@@ -1,6 +1,6 @@
 module github.com/holyhope/digiposte-go-sdk
 
-go 1.26.0
+go 1.26.6
 
 require (
 	github.com/Davincible/chromedp-undetected v1.3.8
