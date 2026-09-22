@@ -21,6 +21,7 @@ type Screen interface {
 type Screens struct {
 	screens          []Screen
 	refreshFrequency time.Duration
+	screenTimeout    time.Duration
 
 	succeeded atomic.Bool
 }
@@ -50,6 +51,13 @@ func (s *Screens) Resolve(ctx context.Context) {
 
 	waitGroup.Wait()
 }
+
+// resolveScreen executes a single resolve attempt for the given screen. It is
+// a package-level variable (rather than a direct call to resolve) purely so
+// tests can substitute a fake implementation that bypasses chromedp - which
+// requires a live browser - while still exercising Screens.run's per-attempt
+// timeout selection in isolation. Production code never reassigns it.
+var resolveScreen = resolve //nolint:gochecknoglobals
 
 func resolve(ctx context.Context, screen Screen) error {
 	if screen.ShouldWaitForResponse() {
@@ -97,11 +105,11 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 				continue
 			}
 
-			ctx, cancel := context.WithTimeout(ctx, s.refreshFrequency)
+			ctx, cancel := context.WithTimeout(ctx, s.screenTimeout)
 
 			infoLogger(ctx).Println("Resolving screen...")
 
-			err := resolve(ctx, screen)
+			err := resolveScreen(ctx, screen)
 
 			cancel()
 
