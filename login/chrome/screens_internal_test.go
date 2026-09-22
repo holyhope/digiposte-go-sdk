@@ -13,11 +13,22 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive
 )
 
+// directResolver is a fake screenResolver that calls screen.Do() directly,
+// bypassing chromedp (which requires a live browser). It lets this spec
+// exercise Screens.run's per-attempt timeout selection in isolation.
+type directResolver struct{}
+
+func (directResolver) resolve(ctx context.Context, screen Screen) error {
+	err := screen.Do(ctx)
+	if err != nil {
+		return fmt.Errorf("do: %w", err)
+	}
+
+	return nil
+}
+
 // slowTestScreen is a Screen whose Do() takes longer than a short polling
-// frequency but less than a generous screen-execution timeout. It never
-// touches chromedp itself; resolveScreen is swapped in the spec below to
-// call Do() directly, since chromedp.Run requires a live browser and this
-// spec only needs to exercise Screens.run's timeout-selection logic.
+// frequency but less than a generous screen-execution timeout.
 type slowTestScreen struct {
 	sleep time.Duration
 	calls atomic.Int32
@@ -45,16 +56,6 @@ func (s *slowTestScreen) Do(ctx context.Context) error {
 var _ = Describe("Screens", func() {
 	Describe("run", func() {
 		It("gives a screen the full execution timeout despite a shorter polling frequency", func(ctx SpecContext) {
-			// Bypass chromedp (which requires a live browser) so this spec can
-			// run screen.Do() directly and observe the deadline Screens.run
-			// actually applies.
-			original := resolveScreen
-			resolveScreen = func(ctx context.Context, screen Screen) error {
-				return screen.Do(ctx)
-			}
-
-			defer func() { resolveScreen = original }()
-
 			screen := &slowTestScreen{
 				sleep: 150 * time.Millisecond,
 				calls: atomic.Int32{},
@@ -64,6 +65,7 @@ var _ = Describe("Screens", func() {
 				screens:          nil,
 				refreshFrequency: 20 * time.Millisecond,
 				screenTimeout:    time.Second,
+				resolver:         directResolver{},
 				succeeded:        atomic.Bool{},
 			}
 

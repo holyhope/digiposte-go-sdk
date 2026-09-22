@@ -115,6 +115,7 @@ func (c *chromeLogin) resolveLogin(
 		},
 		refreshFrequency: c.refreshFrequency,
 		screenTimeout:    c.screenTimeout,
+		resolver:         chromedpResolver{},
 		succeeded:        atomic.Bool{},
 	}
 
