@@ -68,6 +68,14 @@ func (c *chromeMethod) String() string {
 const (
 	// DefaultRefreshFrequency is the default refresh frequency for the login process.
 	DefaultRefreshFrequency = 1500 * time.Millisecond
+
+	// DefaultScreenTimeout is the default timeout for a single matched screen's
+	// automation (its Do()) to complete, independently of DefaultRefreshFrequency.
+	// It is chosen with headroom above the login flow's slowest built-in
+	// multi-step screen (OTP, observed at up to ~10s including a retry) so that
+	// ordinary scheduling/network jitter does not truncate it - see design.md
+	// for the full rationale.
+	DefaultScreenTimeout = 30 * time.Second
 )
 
 func (c *chromeMethod) newChromeLogin(
@@ -75,6 +83,7 @@ func (c *chromeMethod) newChromeLogin(
 ) (context.Context, *chromeLogin, context.CancelFunc, error) {
 	chrome := &chromeLogin{
 		refreshFrequency:   DefaultRefreshFrequency,
+		screenTimeout:      DefaultScreenTimeout,
 		url:                settings.DefaultDocumentURL,
 		cookies:            nil,
 		screenShortOnError: false,
