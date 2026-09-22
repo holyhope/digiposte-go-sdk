@@ -33,8 +33,8 @@ func (s *trustedDeviceScreen) CurrentPageMatches(ctx context.Context) bool {
 
 func (s *trustedDeviceScreen) Do(ctx context.Context) error {
 	err := (&chromedp.Tasks{
-		chromedp.WaitVisible(`#linkLater`, chromedp.BySearch),
-		chromedp.Click(`#linkLater`, chromedp.ByID),
+		chromedp.WaitVisible(`#save-trusted-device-later`, chromedp.BySearch),
+		chromedp.Click(`#save-trusted-device-later`, chromedp.ByID),
 	}).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("tasks: %w", err)
