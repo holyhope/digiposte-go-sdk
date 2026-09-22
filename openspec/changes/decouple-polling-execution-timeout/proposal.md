@@ -7,7 +7,7 @@
 - Add a new, distinct option (e.g. `WithScreenTimeout`) to `login/chrome` that sets how long a single `resolve` attempt (a matched screen's `Do()`) is allowed to run, independently of `WithRefreshFrequency` (which continues to control only how often `CurrentPageMatches` is polled).
 - In `screens.go`'s `run`, use the new screen-execution timeout instead of `s.refreshFrequency` for the `context.WithTimeout` wrapped around `resolve(ctx, screen)`.
 - Give the new option a default that comfortably covers the existing multi-step screens against a real page (independent of whatever `WithRefreshFrequency` a caller picks), so today's callers who never set the new option see no regression, and callers who set a short `WithRefreshFrequency` (for fast polling) no longer starve `Do()` of the time it needs to finish.
-- Update `v1/v1_suite_test.go` to restore a short `WithRefreshFrequency` for fast polling now that it's no longer conflated with execution time (the current workaround set it to `10 * time.Second`, which was only needed because both concerns shared one knob).
+- Verify `v1/v1_suite_test.go`'s existing short `WithRefreshFrequency(500 * time.Millisecond)` now reliably completes the full login flow once execution time is no longer tied to it (previously, only a manual, uncommitted local workaround of raising it to `10 * time.Second` made the suite pass, and even that shared-knob approach masked rather than fixed the underlying conflation).
 - No change to the set of screens, their selectors, or their individual `Do()` logic.
 
 ## Capabilities
@@ -21,5 +21,5 @@
 ## Impact
 
 - Modified code: `login/chrome/screens.go` (execution timeout source), `login/chrome/options.go` (new option), `login/chrome/login_method.go` (new default constant, wiring into `chromeLogin`).
-- Modified test: `v1/v1_suite_test.go` (restore a short `WithRefreshFrequency` instead of the `10s` workaround, since it no longer needs to also cover execution time).
+- Modified test (verification only, no behavior-changing edit expected): `v1/v1_suite_test.go` - its existing `WithRefreshFrequency(500 * time.Millisecond)` should now reliably pass once execution time is decoupled from it.
 - No change to `v1/*` document/folder/share/token clients, no new third-party dependencies, no breaking change - existing callers who only use `WithRefreshFrequency` keep their current polling behavior, and gain a working (non-looping) login by default.
