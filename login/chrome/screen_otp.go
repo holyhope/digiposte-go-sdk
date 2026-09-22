@@ -75,9 +75,9 @@ func (s *otpScreen) Do(ctx context.Context) error {
 		chromedp.Clear(`#otpCode`, chromedp.ByID),
 		chromedp.SendKeys(`#otpCode`, otpCode, chromedp.ByID),
 
-		chromedp.WaitVisible(`#submit`, chromedp.ByID),
-		chromedp.WaitEnabled(`#submit`, chromedp.ByID),
-		chromedp.Click(`#submit`, chromedp.ByID),
+		chromedp.WaitVisible(`#submit-button`, chromedp.ByID),
+		chromedp.WaitEnabled(`#submit-button`, chromedp.ByID),
+		chromedp.Click(`#submit-button`, chromedp.ByID),
 	}).Do(ctx)
 	if err != nil {
 		return fmt.Errorf("tasks: %w", err)
