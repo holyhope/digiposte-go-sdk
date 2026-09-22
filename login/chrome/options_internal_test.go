@@ -13,7 +13,15 @@ import (
 var _ = Describe("WithScreenTimeout", func() {
 	It("sets the chromeLogin's screen execution timeout, independently of refreshFrequency", func() {
 		instance := &chromeLogin{
-			refreshFrequency: 500 * time.Millisecond,
+			url:                "",
+			cookies:            nil,
+			screenShortOnError: false,
+			refreshFrequency:   500 * time.Millisecond,
+			screenTimeout:      0,
+			timeout:            0,
+			infoLogger:         nil,
+			errorLogger:        nil,
+			binaryPath:         "",
 		}
 
 		Expect(WithScreenTimeout(5 * time.Second).Apply(instance)).To(Succeed())

@@ -2,13 +2,15 @@ package chrome
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync/atomic"
 	"time"
 
+	"github.com/onsi/gomega/gbytes"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
-	"github.com/onsi/gomega/gbytes"
 )
 
 // slowTestScreen is a Screen whose Do() takes longer than a short polling
@@ -36,13 +38,13 @@ func (s *slowTestScreen) Do(ctx context.Context) error {
 	case <-time.After(s.sleep):
 		return nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("wait: %w", ctx.Err())
 	}
 }
 
 var _ = Describe("Screens", func() {
 	Describe("run", func() {
-		It("gives a matched screen the full screen-execution timeout, independent of a shorter polling frequency", func(ctx SpecContext) {
+		It("gives a screen the full execution timeout despite a shorter polling frequency", func(ctx SpecContext) {
 			// Bypass chromedp (which requires a live browser) so this spec can
 			// run screen.Do() directly and observe the deadline Screens.run
 			// actually applies.
@@ -53,11 +55,16 @@ var _ = Describe("Screens", func() {
 
 			defer func() { resolveScreen = original }()
 
-			screen := &slowTestScreen{sleep: 150 * time.Millisecond}
+			screen := &slowTestScreen{
+				sleep: 150 * time.Millisecond,
+				calls: atomic.Int32{},
+			}
 
 			screens := &Screens{
+				screens:          nil,
 				refreshFrequency: 20 * time.Millisecond,
 				screenTimeout:    time.Second,
+				succeeded:        atomic.Bool{},
 			}
 
 			logs := gbytes.NewBuffer()
