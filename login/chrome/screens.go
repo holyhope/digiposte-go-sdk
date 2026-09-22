@@ -97,13 +97,13 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 				continue
 			}
 
+			ctx, cancel := context.WithTimeout(ctx, s.refreshFrequency)
+
 			infoLogger(ctx).Println("Resolving screen...")
 
-			// The refresh frequency controls how often screens are detected; it is
-			// not an execution deadline. Form submissions can legitimately take
-			// several ticks while the browser waits for the navigation response.
-			// The login context already provides the overall timeout.
 			err := resolve(ctx, screen)
+
+			cancel()
 
 			if err != nil {
 				if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
