@@ -15,6 +15,7 @@ func TestWithScreenDumpDir(t *testing.T) {
 			refreshFrequency:   0,
 			timeout:            0,
 			screenDumpDir:      "",
+			capturer:           nil,
 			infoLogger:         nil,
 			errorLogger:        nil,
 			binaryPath:         "",

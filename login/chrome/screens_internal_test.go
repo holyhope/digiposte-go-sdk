@@ -61,19 +61,16 @@ func (s *spyCapturer) capture(_ context.Context, dir string) error {
 	return nil
 }
 
-func TestScreensRunCapturesWhenScreenDumpDirSet(t *testing.T) {
+func TestScreensRunUsesInjectedResolver(t *testing.T) {
 	t.Parallel()
 
 	screen := &fakeScreen{matches: atomic.Bool{}}
 	resolver := &fakeResolver{calls: atomic.Int32{}}
-	capturer := &spyCapturer{calls: atomic.Int32{}, dirs: nil}
 
 	screens := &Screens{
-		screens:          nil,
+		screens:          []Screen{screen},
 		refreshFrequency: time.Millisecond,
-		screenDumpDir:    t.TempDir(),
 		resolver:         resolver,
-		capturer:         capturer,
 		succeeded:        atomic.Bool{},
 	}
 
@@ -87,40 +84,54 @@ func TestScreensRunCapturesWhenScreenDumpDirSet(t *testing.T) {
 	waitFor(t, func() bool { return resolver.calls.Load() > 0 })
 
 	screens.succeeded.Store(true)
+}
 
-	waitFor(t, func() bool { return capturer.calls.Load() > 0 })
+func TestChromeLoginMaybeStartCaptureWhenScreenDumpDirSet(t *testing.T) {
+	t.Parallel()
 
-	if got := capturer.dirs[0]; got != screens.screenDumpDir {
-		t.Fatalf("capture called with dir %q, want %q", got, screens.screenDumpDir)
+	capturer := &spyCapturer{calls: atomic.Int32{}, dirs: nil}
+	instance := &chromeLogin{
+		url:                "",
+		cookies:            nil,
+		screenShortOnError: false,
+		refreshFrequency:   0,
+		timeout:            0,
+		screenDumpDir:      t.TempDir(),
+		capturer:           capturer,
+		infoLogger:         nil,
+		errorLogger:        nil,
+		binaryPath:         "",
+	}
+
+	instance.maybeStartCapture(withTestLoggers(t.Context()))
+
+	if capturer.calls.Load() != 1 {
+		t.Fatalf("capturer called %d times, want 1", capturer.calls.Load())
+	}
+
+	if got := capturer.dirs[0]; got != instance.screenDumpDir {
+		t.Fatalf("capture called with dir %q, want %q", got, instance.screenDumpDir)
 	}
 }
 
-func TestScreensRunDoesNotCaptureWhenScreenDumpDirUnset(t *testing.T) {
+func TestChromeLoginMaybeStartCaptureDoesNotCaptureWhenScreenDumpDirUnset(t *testing.T) {
 	t.Parallel()
 
-	screen := &fakeScreen{matches: atomic.Bool{}}
-	resolver := &fakeResolver{calls: atomic.Int32{}}
 	capturer := &spyCapturer{calls: atomic.Int32{}, dirs: nil}
-
-	screens := &Screens{
-		screens:          nil,
-		refreshFrequency: time.Millisecond,
-		screenDumpDir:    "",
-		resolver:         resolver,
-		capturer:         capturer,
-		succeeded:        atomic.Bool{},
+	instance := &chromeLogin{
+		url:                "",
+		cookies:            nil,
+		screenShortOnError: false,
+		refreshFrequency:   0,
+		timeout:            0,
+		screenDumpDir:      "",
+		capturer:           capturer,
+		infoLogger:         nil,
+		errorLogger:        nil,
+		binaryPath:         "",
 	}
 
-	ctx, cancel := context.WithTimeout(withTestLoggers(t.Context()), 100*time.Millisecond)
-	defer cancel()
-
-	screen.matches.Store(true)
-
-	screens.run(ctx, screen)
-
-	if resolver.calls.Load() == 0 {
-		t.Fatal("expected resolver to be called at least once")
-	}
+	instance.maybeStartCapture(withTestLoggers(t.Context()))
 
 	if capturer.calls.Load() != 0 {
 		t.Fatalf("expected capturer to never be called, got %d calls", capturer.calls.Load())
@@ -186,6 +197,42 @@ func TestWriteCapturedResponse(t *testing.T) {
 				t.Fatalf("content = %q, want %q", got, body)
 			}
 		})
+	}
+}
+
+func TestWriteCapturedResponseCollisionAppendsSuffix(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	err := writeCapturedResponse(dir, "https://example.com/login-actions/authenticate", []byte("credentials"))
+	if err != nil {
+		t.Fatalf("writeCapturedResponse (1st): %v", err)
+	}
+
+	err = writeCapturedResponse(dir, "https://example.com/login-actions/authenticate", []byte("otp"))
+	if err != nil {
+		t.Fatalf("writeCapturedResponse (2nd): %v", err)
+	}
+
+	err = writeCapturedResponse(dir, "https://example.com/login-actions/authenticate", []byte("trusted-device"))
+	if err != nil {
+		t.Fatalf("writeCapturedResponse (3rd): %v", err)
+	}
+
+	for path, want := range map[string]string{
+		"login-actions/authenticate":   "credentials",
+		"login-actions/authenticate-2": "otp",
+		"login-actions/authenticate-3": "trusted-device",
+	} {
+		got, err := os.ReadFile(filepath.Join(dir, "example.com", path))
+		if err != nil {
+			t.Fatalf("ReadFile(%q): %v", path, err)
+		}
+
+		if string(got) != want {
+			t.Fatalf("content of %q = %q, want %q", path, got, want)
+		}
 	}
 }
 

@@ -22,18 +22,9 @@ type Screens struct {
 	screens          []Screen
 	refreshFrequency time.Duration
 
-	// screenDumpDir is set only via the test-only WithScreenDumpDir helper
-	// declared in export_test.go; when empty, no network capture happens.
-	screenDumpDir string
-
-	// capturer is the networkCapturer used when screenDumpDir is set.
-	// Nil defaults to cdpNetworkCapturer{} in run(); tests inject a fake
-	// to verify the wiring without a live browser target.
-	capturer networkCapturer
-
 	// resolver drives an already-matched screen's Do()/RunResponse over
 	// CDP. Nil defaults to chromedpResolver{} in run(); tests inject a
-	// fake so run()'s dump-wiring can be exercised without a live browser
+	// fake so run()'s wiring can be exercised without a live browser
 	// target, since the real resolve() requires a chromedp browser
 	// context even for a no-op fake Screen.
 	resolver screenResolver
@@ -109,29 +100,9 @@ func (s *Screens) Succeeded() bool {
 	return s.succeeded.Load()
 }
 
-// maybeStartCapture starts capturer against ctx when screenDumpDir is set,
-// logging (rather than failing the screen) if starting the capture itself
-// fails - a maintainer-only capture run should still surface the login
-// outcome even if capture setup had a problem.
-func (s *Screens) maybeStartCapture(ctx context.Context, capturer networkCapturer) {
-	if s.screenDumpDir == "" {
-		return
-	}
-
-	err := capturer.capture(ctx, s.screenDumpDir)
-	if err != nil {
-		errorLogger(ctx).Printf("Failed to start network capture: %v\n", err)
-	}
-}
-
 func (s *Screens) run(ctx context.Context, screen Screen) {
 	refreshFrequency := time.NewTicker(s.refreshFrequency)
 	defer refreshFrequency.Stop()
-
-	capturer := s.capturer
-	if capturer == nil {
-		capturer = cdpNetworkCapturer{}
-	}
 
 	resolver := s.resolver
 	if resolver == nil {
@@ -152,8 +123,6 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 			}
 
 			ctx, cancel := context.WithTimeout(ctx, s.refreshFrequency)
-
-			s.maybeStartCapture(ctx, capturer)
 
 			infoLogger(ctx).Println("Resolving screen...")
 
