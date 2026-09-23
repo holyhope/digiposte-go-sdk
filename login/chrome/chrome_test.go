@@ -43,18 +43,27 @@ var _ = Describe("Login", func() {
 			chromeBinary, err := launcher.NewBrowser().Get()
 			Expect(err).ToNot(HaveOccurred())
 
-			loginWithChrome, err := chrome.New(
+			opts := []login.Option{
 				chrome.WithURL(os.Getenv("DIGIPOSTE_URL")),
 				chrome.WithCookies(nil),
-				chrome.WithRefreshFrequency(500*time.Millisecond), // Reduce the test duration
+				chrome.WithRefreshFrequency(500 * time.Millisecond), // Reduce the test duration
 				chrome.WithLoggers(
 					log.New(GinkgoWriter, "[INFO] ", log.Ldate|log.Ltime|log.Lmsgprefix),
 					log.New(GinkgoWriter, "[ERRO] ", log.Ldate|log.Ltime|log.Lmsgprefix),
 				),
 				chrome.WithScreenShortOnError(),
-				chrome.WithTimeout(3*time.Minute),
+				chrome.WithTimeout(3 * time.Minute),
 				chrome.WithBinary(chromeBinary),
-			)
+			}
+
+			// Opt-in only: set CHROME_SCREEN_DUMP_DIR to (re)capture this
+			// package's offline test fixtures from a real login session. See
+			// openspec/changes/mock-chrome-login-screens.
+			if dumpDir := os.Getenv("CHROME_SCREEN_DUMP_DIR"); dumpDir != "" {
+				opts = append(opts, chrome.WithScreenDumpDir(dumpDir))
+			}
+
+			loginWithChrome, err := chrome.New(opts...)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(loginWithChrome).ToNot(BeNil())
 

@@ -61,6 +61,8 @@ func (c *chromeLogin) login(
 
 	defer c.WrapError(independentChromeCtx, &finalErr)
 
+	c.maybeStartCapture(ctx)
+
 	err := resolve(ctx, &firstScreen{
 		URL:     c.url,
 		Cookies: c.cookies,
@@ -114,6 +116,7 @@ func (c *chromeLogin) resolveLogin(
 			finalScreen,
 		},
 		refreshFrequency: c.refreshFrequency,
+		resolver:         nil,
 		succeeded:        atomic.Bool{},
 	}
 
@@ -146,10 +149,48 @@ type chromeLogin struct {
 	refreshFrequency   time.Duration
 	timeout            time.Duration
 
+	// screenDumpDir is set only via the test-only WithScreenDumpDir helper
+	// declared in export_test.go; see that file for details.
+	screenDumpDir string
+
+	// capturer is the networkCapturer used when screenDumpDir is set. Nil
+	// defaults to cdpNetworkCapturer{} in maybeStartCapture; tests inject
+	// a fake to verify the wiring without a live browser target.
+	capturer networkCapturer
+
 	infoLogger  *log.Logger
 	errorLogger *log.Logger
 
 	binaryPath string
+}
+
+// maybeStartCapture starts c.capturer against ctx when screenDumpDir is
+// set, logging (rather than failing the login) if starting the capture
+// itself fails - a maintainer-only capture run should still surface the
+// login outcome even if capture setup had a problem.
+//
+// It must be called before the first navigation (see login below): the
+// credentials/OTP/trusted-device screens are resolved by Screens.Resolve,
+// but the very first page load happens earlier, via firstScreen, and would
+// otherwise never be captured.
+func (c *chromeLogin) maybeStartCapture(ctx context.Context) {
+	if c.screenDumpDir == "" {
+		return
+	}
+
+	capturer := c.capturer
+	if capturer == nil {
+		capturer = cdpNetworkCapturer{}
+	}
+
+	err := capturer.capture(ctx, c.screenDumpDir)
+	if err != nil {
+		errorLogger(ctx).Printf("Failed to start network capture: %v\n", err)
+
+		return
+	}
+
+	infoLogger(ctx).Printf("Started network capture into %q\n", c.screenDumpDir)
 }
 
 type HTTPError struct {

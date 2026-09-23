@@ -22,7 +22,27 @@ type Screens struct {
 	screens          []Screen
 	refreshFrequency time.Duration
 
+	// resolver drives an already-matched screen's Do()/RunResponse over
+	// CDP. Nil defaults to chromedpResolver{} in run(); tests inject a
+	// fake so run()'s wiring can be exercised without a live browser
+	// target, since the real resolve() requires a chromedp browser
+	// context even for a no-op fake Screen.
+	resolver screenResolver
+
 	succeeded atomic.Bool
+}
+
+// screenResolver resolves an already-matched Screen. It is an interface
+// purely as a test seam (see the Screens.resolver field doc); the
+// production implementation, chromedpResolver, just calls resolve().
+type screenResolver interface {
+	resolve(ctx context.Context, screen Screen) error
+}
+
+type chromedpResolver struct{}
+
+func (chromedpResolver) resolve(ctx context.Context, screen Screen) error {
+	return resolve(ctx, screen)
 }
 
 func (s *Screens) Resolve(ctx context.Context) {
@@ -84,6 +104,11 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 	refreshFrequency := time.NewTicker(s.refreshFrequency)
 	defer refreshFrequency.Stop()
 
+	resolver := s.resolver
+	if resolver == nil {
+		resolver = chromedpResolver{}
+	}
+
 	infoLogger(ctx).Println("Started resolver...")
 	defer infoLogger(ctx).Println("Stopped resolver")
 
@@ -101,7 +126,7 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 
 			infoLogger(ctx).Println("Resolving screen...")
 
-			err := resolve(ctx, screen)
+			err := resolver.resolve(ctx, screen)
 
 			cancel()
 
