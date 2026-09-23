@@ -114,6 +114,9 @@ func (c *chromeLogin) resolveLogin(
 			finalScreen,
 		},
 		refreshFrequency: c.refreshFrequency,
+		screenDumpDir:    c.screenDumpDir,
+		capturer:         nil,
+		resolver:         nil,
 		succeeded:        atomic.Bool{},
 	}
 
@@ -145,6 +148,10 @@ type chromeLogin struct {
 	screenShortOnError bool
 	refreshFrequency   time.Duration
 	timeout            time.Duration
+
+	// screenDumpDir is set only via the test-only WithScreenDumpDir helper
+	// declared in export_test.go; see that file for details.
+	screenDumpDir string
 
 	infoLogger  *log.Logger
 	errorLogger *log.Logger
