@@ -219,5 +219,14 @@ var _ = Describe("Login", func() {
 				Expect(err).To(MatchError(HaveSuffix(`option "WithTimeout": timeout must be positive`)))
 			})
 		})
+
+		Describe("Negative screen timeout", func() {
+			It("Should return an error", func() {
+				_, err := chrome.New(
+					chrome.WithScreenTimeout(-1),
+				)
+				Expect(err).To(MatchError(HaveSuffix(`option "WithScreenTimeout": screen timeout must be positive`)))
+			})
+		})
 	})
 })

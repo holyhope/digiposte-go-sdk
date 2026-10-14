@@ -114,6 +114,8 @@ func (c *chromeLogin) resolveLogin(
 			finalScreen,
 		},
 		refreshFrequency: c.refreshFrequency,
+		screenTimeout:    c.screenTimeout,
+		resolver:         chromedpResolver{},
 		succeeded:        atomic.Bool{},
 	}
 
@@ -144,6 +146,7 @@ type chromeLogin struct {
 
 	screenShortOnError bool
 	refreshFrequency   time.Duration
+	screenTimeout      time.Duration
 	timeout            time.Duration
 
 	infoLogger  *log.Logger
