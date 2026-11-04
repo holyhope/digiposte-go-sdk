@@ -47,7 +47,7 @@ func newDigiposteClient(ctx context.Context) (*digiposte.Client, error) {
 
 	chromeMethod, err := chrome.New(
 		chrome.WithURL(documentURL),
-		chrome.WithRefreshFrequency(500*time.Millisecond), // Reduce the test duration
+		chrome.WithRefreshFrequency(5*time.Second),
 		chrome.WithScreenShortOnError(),
 		chrome.WithTimeout(3*time.Minute),
 		chrome.WithBinary(path),
