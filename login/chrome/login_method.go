@@ -82,6 +82,8 @@ func (c *chromeMethod) newChromeLogin(
 		errorLogger:        log.Default(),
 		timeout:            0,
 		binaryPath:         "",
+		screenDumpDir:      "",
+		capturer:           nil,
 	}
 
 	for i, opt := range c.opts {
