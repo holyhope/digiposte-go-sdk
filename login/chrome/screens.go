@@ -18,9 +18,27 @@ type Screen interface {
 	chromedp.Action
 }
 
+// screenResolver executes a single resolve attempt for a screen. The
+// production implementation (chromedpResolver) drives a live chromedp
+// browser; tests substitute a fake implementation that bypasses chromedp so
+// they can exercise Screens.run's per-attempt timeout selection in
+// isolation.
+type screenResolver interface {
+	resolve(ctx context.Context, screen Screen) error
+}
+
+// chromedpResolver is the production screenResolver, backed by chromedp.
+type chromedpResolver struct{}
+
+func (chromedpResolver) resolve(ctx context.Context, screen Screen) error {
+	return resolve(ctx, screen)
+}
+
 type Screens struct {
 	screens          []Screen
 	refreshFrequency time.Duration
+	screenTimeout    time.Duration
+	resolver         screenResolver
 
 	succeeded atomic.Bool
 }
@@ -81,6 +99,11 @@ func (s *Screens) Succeeded() bool {
 }
 
 func (s *Screens) run(ctx context.Context, screen Screen) {
+	resolver := s.resolver
+	if resolver == nil {
+		resolver = chromedpResolver{}
+	}
+
 	refreshFrequency := time.NewTicker(s.refreshFrequency)
 	defer refreshFrequency.Stop()
 
@@ -97,11 +120,11 @@ func (s *Screens) run(ctx context.Context, screen Screen) {
 				continue
 			}
 
-			ctx, cancel := context.WithTimeout(ctx, s.refreshFrequency)
+			ctx, cancel := context.WithTimeout(ctx, s.screenTimeout)
 
 			infoLogger(ctx).Println("Resolving screen...")
 
-			err := resolve(ctx, screen)
+			err := resolver.resolve(ctx, screen)
 
 			cancel()
 

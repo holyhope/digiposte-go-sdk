@@ -89,6 +89,40 @@ func (o *withTimeout) Validate() error {
 	return nil
 }
 
+var errNegativeScreenTimeout = errors.New("screen timeout must be positive")
+
+// WithScreenTimeout sets how long a single matched screen's automation (its
+// Do()) is allowed to run, independently of WithRefreshFrequency (which only
+// controls how often the page is polled for a match).
+func WithScreenTimeout(timeout time.Duration) login.Option { //nolint:ireturn
+	return &withScreenTimeout{Timeout: timeout}
+}
+
+type withScreenTimeout struct {
+	Timeout time.Duration
+}
+
+func (o *withScreenTimeout) Apply(instance any) error {
+	if chrome, ok := instance.(*chromeLogin); ok {
+		chrome.screenTimeout = o.Timeout
+
+		return nil
+	}
+
+	return &InvalidTypeOptionError{instance: instance}
+}
+
+func (o *withScreenTimeout) Validate() error {
+	if o.Timeout <= 0 {
+		return &login.InvalidOptionError{
+			Name: "WithScreenTimeout",
+			Err:  errNegativeScreenTimeout,
+		}
+	}
+
+	return nil
+}
+
 var errEmptyURL = errors.New("url is empty")
 
 // WithURL sets the URL to which the login process will be directed.
